@@ -11,6 +11,7 @@ async function ensureTable() {
       user_id VARCHAR(255) NOT NULL UNIQUE,
       customer_id INTEGER,
       page_id VARCHAR(255),
+      page_name VARCHAR(255),
       page_access_token TEXT,
       verify_token VARCHAR(255),
       app_secret TEXT,
@@ -20,6 +21,7 @@ async function ensureTable() {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `).catch(() => {});
+  await query(`ALTER TABLE facebook_connections ADD COLUMN IF NOT EXISTS page_name VARCHAR(255)`).catch(() => {});
 }
 
 async function fetchPageId(pageAccessToken) {
@@ -44,10 +46,9 @@ export async function GET(request) {
     await ensureTable();
 
     const result = await query(
-      `SELECT page_id, business_name, status, created_at, updated_at,
-              page_access_token IS NOT NULL AS has_page_access_token,
-              verify_token IS NOT NULL AS has_verify_token,
-              app_secret IS NOT NULL AS has_app_secret
+      `SELECT page_id, COALESCE(page_name, business_name) AS page_name,
+              business_name, status, created_at, updated_at,
+              page_access_token IS NOT NULL AS has_page_access_token
        FROM facebook_connections WHERE user_id = $1`,
       [userId]
     );

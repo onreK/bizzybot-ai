@@ -23,8 +23,8 @@ export async function GET(request) {
   const appId = process.env.FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
   const secret = process.env.FACEBOOK_APP_SECRET;
   if (!appId || !secret) {
-    const setupPage = type === 'instagram' ? '/instagram-setup' : '/facebook-setup';
-    return NextResponse.redirect(new URL(`${setupPage}?error=not_configured`, request.url));
+    const page = type === 'instagram' ? '/instagram' : '/facebook';
+    return NextResponse.redirect(new URL(`${page}?error=not_configured`, request.url));
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';

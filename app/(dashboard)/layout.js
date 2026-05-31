@@ -30,7 +30,7 @@ const NAV = [
     items: [
       { label: 'Email', href: '/email', icon: Mail },
       { label: 'SMS', href: '/customer-sms-dashboard', icon: Phone },
-      { label: 'Facebook', href: '/facebook-setup', icon: Facebook },
+      { label: 'Facebook', href: '/facebook', icon: Facebook },
       { label: 'Instagram', href: '/instagram', icon: Instagram },
       { label: 'Scheduling', href: '/scheduling', icon: Calendar },
       { label: 'Web Chat', href: '/web-chat', icon: MessageCircle },

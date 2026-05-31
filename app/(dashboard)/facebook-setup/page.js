@@ -43,7 +43,7 @@ export default function FacebookSetup() {
     try {
       const res = await fetch('/api/facebook/configure');
       const data = await res.json();
-      if (data.configured) setStatus({ connected: true, pageName: data.config?.page_name || null });
+      if (data.configured) setStatus({ connected: true, pageName: data.connection?.page_name || null });
     } catch {}
     setLoading(false);
   };

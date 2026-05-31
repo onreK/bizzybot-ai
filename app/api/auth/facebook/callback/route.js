@@ -38,10 +38,10 @@ export async function GET(request) {
     const colonIdx = payload.indexOf(':');
     const userId = colonIdx > -1 ? payload.slice(0, colonIdx) : payload;
     const type = colonIdx > -1 ? payload.slice(colonIdx + 1) : 'instagram';
-    const setupPage = type === 'instagram' ? '/instagram-setup' : '/facebook-setup';
+    const dashboardPage = type === 'instagram' ? '/instagram' : '/facebook';
 
-    if (errorParam) return redirect(`${setupPage}?error=oauth_denied`);
-    if (!code || !userId) return redirect(`${setupPage}?error=oauth_failed`);
+    if (errorParam) return redirect(`${dashboardPage}?error=oauth_denied`);
+    if (!code || !userId) return redirect(`${dashboardPage}?error=oauth_failed`);
 
     const callbackUrl = `${BASE_URL}/api/auth/facebook/callback`;
 
@@ -135,7 +135,7 @@ export async function GET(request) {
       `, [userId, customerId, page.id, page.name, page.access_token,
           process.env.FACEBOOK_VERIFY_TOKEN || 'bizzybot-fb-verify', appSecret]);
 
-      return redirect(`/facebook-setup?success=connected&page=${encodeURIComponent(page.name)}`);
+      return redirect(`/facebook?success=connected&page=${encodeURIComponent(page.name)}`);
     }
 
     if (type === 'instagram') {
@@ -180,10 +180,10 @@ export async function GET(request) {
       return redirect(`/instagram?success=connected&username=${encodeURIComponent(username)}`);
     }
 
-    return redirect(`${setupPage}?error=oauth_failed`);
+    return redirect(`${dashboardPage}?error=oauth_failed`);
 
   } catch (err) {
     console.error('Facebook OAuth callback error:', err);
-    return redirect('/instagram?error=oauth_failed');
+    return redirect('/facebook?error=oauth_failed');
   }
 }

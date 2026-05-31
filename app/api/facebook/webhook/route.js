@@ -157,6 +157,22 @@ async function handleDM(event, connection) {
 
   await sendDM(senderId, reply, connection?.page_access_token);
   console.log('✅ Facebook DM reply sent');
+
+  if (connection?.user_id) {
+    await query(`
+      CREATE TABLE IF NOT EXISTS facebook_messages (
+        id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL,
+        type VARCHAR(50) NOT NULL DEFAULT 'dm', sender_id VARCHAR(255),
+        sender_name VARCHAR(255), message_text TEXT, ai_reply TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(() => {});
+    await query(
+      `INSERT INTO facebook_messages (user_id, type, sender_id, message_text, ai_reply)
+       VALUES ($1, 'dm', $2, $3, $4)`,
+      [connection.user_id, senderId, messageText.substring(0, 500), reply.substring(0, 1000)]
+    ).catch(() => {});
+  }
 }
 
 async function handleComment(value, pageId, connection) {
@@ -186,4 +202,12 @@ async function handleComment(value, pageId, connection) {
 
   await replyToComment(commentId, reply, connection?.page_access_token);
   console.log('✅ Facebook comment reply sent');
+
+  if (connection?.user_id) {
+    await query(
+      `INSERT INTO facebook_messages (user_id, type, sender_name, message_text, ai_reply)
+       VALUES ($1, 'comment', $2, $3, $4)`,
+      [connection.user_id, senderName, messageText.substring(0, 500), reply.substring(0, 1000)]
+    ).catch(() => {});
+  }
 }
