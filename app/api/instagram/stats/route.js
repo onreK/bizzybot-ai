@@ -51,9 +51,9 @@ export async function GET() {
 
     try {
       const r = await query(
-        `SELECT COUNT(*) as count FROM hot_leads hl
-         JOIN customers c ON c.id = hl.customer_id
-         WHERE c.clerk_user_id = $1 AND lower(hl.channel) = 'instagram'`,
+        `SELECT COUNT(*) as count FROM contacts ct
+         JOIN customers c ON c.id = ct.customer_id
+         WHERE c.clerk_user_id = $1 AND lower(ct.source_channel) = 'instagram'`,
         [userId]
       );
       leadsFromInstagram = parseInt(r.rows[0]?.count) || 0;

@@ -37,31 +37,31 @@ export async function GET() {
 
       const customerId = customerResult.rows[0].id;
 
-      // Query recent hot leads (last 14 days)
+      // Query recent hot contacts (last 14 days) from contacts table
       const leadsResult = await client.query(
-        `SELECT id, first_name, last_name, email, phone, channel, temperature, created_at
-         FROM hot_leads
+        `SELECT id, name, email, phone,
+                COALESCE(source_channel, 'web') AS channel,
+                COALESCE(lead_temperature, 'hot') AS temperature,
+                COALESCE(last_interaction_at, created_at) AS created_at
+         FROM contacts
          WHERE customer_id = $1
-           AND created_at > NOW() - INTERVAL '14 days'
-         ORDER BY created_at DESC
+           AND lead_temperature = 'hot'
+           AND COALESCE(last_interaction_at, created_at) > NOW() - INTERVAL '14 days'
+         ORDER BY COALESCE(last_interaction_at, created_at) DESC
          LIMIT 20`,
         [customerId]
       );
 
-      const notifications = leadsResult.rows.map(lead => {
-        const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') ||
-                     lead.phone || lead.email || 'Unknown contact';
-        return {
-          id: `hot_lead_${lead.id}`,
-          type: 'hot_lead',
-          title: 'Hot lead detected',
-          description: name,
-          channel: lead.channel || 'web',
-          temperature: lead.temperature || 'hot',
-          timestamp: lead.created_at,
-          href: '/leads'
-        };
-      });
+      const notifications = leadsResult.rows.map(lead => ({
+        id: `hot_lead_${lead.id}`,
+        type: 'hot_lead',
+        title: 'Hot lead detected',
+        description: lead.name || lead.phone || lead.email || 'Unknown contact',
+        channel: lead.channel,
+        temperature: lead.temperature,
+        timestamp: lead.created_at,
+        href: '/leads'
+      }));
 
       return NextResponse.json({ notifications });
     } finally {
