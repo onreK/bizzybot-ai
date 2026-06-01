@@ -33,6 +33,8 @@ export default authMiddleware({
     // Cron endpoint - protected by CRON_SECRET bearer token, not Clerk
     "/api/cron/run",
     "/api/stripe/webhook",
+    // Gmail monitor called internally by cron (no Clerk session available)
+    "/api/gmail/monitor",
   ],
   
   // Routes that are completely ignored by Clerk (no auth checks)
