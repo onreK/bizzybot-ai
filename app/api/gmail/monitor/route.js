@@ -257,7 +257,20 @@ async function withTimeout(promise, timeoutMs, operation) {
 // MAIN POST HANDLER
 export async function POST(request) {
   console.log('📧 === GMAIL MONITOR v3.2 WITH CUSTOM RESPONSE SUPPORT ===');
-  
+
+  // Accept either a Clerk session (dashboard) or the CRON_SECRET bearer token (cron job).
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+  const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+  if (!isCron) {
+    const { auth } = await import('@clerk/nextjs/server');
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   try {
     const requestTimeout = setTimeout(() => {
       console.error('⏰ Request timed out after 30 seconds');

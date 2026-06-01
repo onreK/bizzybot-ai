@@ -29,7 +29,10 @@ export async function POST(request) {
       try {
         const res = await fetch(`${baseUrl}/api/gmail/monitor`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`
+          },
           body: JSON.stringify({ action: 'check', emailAddress: conn.gmail_email })
         });
 
