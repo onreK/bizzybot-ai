@@ -544,7 +544,6 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
                 }, customerSettings);
 
                 if (filterResult.shouldFilter) {
-                  console.log(`🚫 Email filtered from ${fromEmail}: ${filterResult.reason}`);
                   filteredCount++;
 
                   if (customerSettings.auto_archive_spam !== false) {
