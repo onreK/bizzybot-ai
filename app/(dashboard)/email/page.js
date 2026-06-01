@@ -1112,7 +1112,7 @@ export default function CompleteEmailSystem() {
                     )}
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {gmailConnection.email} â€¢ Auto-monitoring active
+                    {gmailConnection.email} &middot; Auto-monitoring active
                   </p>
                 </div>
               </div>
@@ -1357,7 +1357,7 @@ export default function CompleteEmailSystem() {
                       }}
                       className="px-2 py-1 rounded-md bg-yellow-600/20 text-yellow-400 text-xs hover:bg-yellow-600/30 transition-colors"
                     >
-                      ðŸ§ª Add Test
+                      + Add Test
                     </button>
                   </div>
                 </div>
@@ -1523,7 +1523,7 @@ export default function CompleteEmailSystem() {
                         </p>
                         <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg max-w-sm">
                           <p className="text-green-300 text-sm">
-                            ðŸ’¡ <strong>Tip:</strong> Use the "ðŸ§ª Add Test" button above to see how sent emails will look
+                            <strong>Tip:</strong> Use the "+ Add Test" button above to see how sent emails will look
                           </p>
                         </div>
                       </div>
