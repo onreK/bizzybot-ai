@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
 import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
+import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import crypto from 'crypto';
 
 export async function POST(request) {
@@ -81,9 +82,17 @@ export async function POST(request) {
           message: summary || transcript?.slice(0, 500) || 'Inbound voice call',
         }).catch(() => {});
 
-        // 4. Re-score lead if transcript has buying signals
-        if (isHot && contactResult?.contact?.id) {
-          await updateLeadScoring(owner.customer_id, contactResult.contact.id).catch(() => {});
+        // 4. Re-score + alert if transcript has buying signals
+        if (isHot) {
+          if (contactResult?.contact?.id) {
+            await updateLeadScoring(owner.customer_id, contactResult.contact.id).catch(() => {});
+          }
+          await sendHotLeadAlert(owner.clerk_user_id, {
+            contactPhone: callerPhone,
+            channel: 'voice',
+            message: summary || transcript?.slice(0, 300),
+            score: hotScore,
+          });
           console.log(`🔥 Hot voice lead detected for ${callerPhone} (score: ${hotScore})`);
         }
       }

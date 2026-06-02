@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { generateSMSResponse } from '../../../../lib/ai-service.js';
 import { query } from '../../../../lib/database.js';
+import { sendHotLeadAlert } from '../../../../lib/owner-alerts.js';
 
 // Initialize Twilio
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -180,15 +181,14 @@ export async function POST(request) {
       aiResponse = "Thanks for your message! I'm experiencing some technical difficulties right now, but I'll make sure someone gets back to you soon.";
     }
 
-    // Send alert if hot lead detected by centralized service
-    if (aiResult.hotLead?.isHotLead) {
-      const alertSent = await sendHotLeadAlert(customerConfig, {
-        phone: fromNumber,
-        score: aiResult.hotLead.score,
-        reasoning: aiResult.hotLead.reasoning
-      }, messageBody);
-      
-      console.log('📢 Hot lead alert sent:', alertSent);
+    // Send alert if hot lead detected
+    if (aiResult.hotLead?.isHotLead && resolvedClerkUserId) {
+      await sendHotLeadAlert(resolvedClerkUserId, {
+        contactPhone: fromNumber,
+        channel: 'sms',
+        message: messageBody,
+        score: aiResult.hotLead.score || 80,
+      });
     }
 
     // Capture lead if not already captured

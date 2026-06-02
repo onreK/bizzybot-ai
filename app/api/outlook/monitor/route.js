@@ -3,6 +3,7 @@ import { query } from '@/lib/database.js';
 import { generateAIResponse } from '@/lib/ai-service.js';
 import { checkEmailFilter } from '@/lib/email-filtering.js';
 import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
+import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -239,6 +240,13 @@ async function processAccount(conn) {
           score: aiResult.hotLead.score || 80,
           temperature: 'hot',
         }).catch(() => {});
+        await sendHotLeadAlert(customer.clerk_user_id, {
+          contactName: fromName,
+          contactEmail: fromEmail,
+          channel: 'outlook',
+          message: bodyText,
+          score: aiResult.hotLead.score || 80,
+        });
       }
 
       processed++;

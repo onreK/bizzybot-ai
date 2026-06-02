@@ -128,9 +128,10 @@ export default function SettingsPage() {
     smsAlerts: false,
     pushNotifications: true,
     weeklyReports: true,
-    hotLeadAlerts: true,
+    hotLeadAlerts: false,
     marketingEmails: false
   });
+  const [alertEmail, setAlertEmail] = useState('');
   
   // Integrations State
   const [integrations, setIntegrations] = useState([
@@ -246,7 +247,8 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.preferences) {
-          setNotifications(data.preferences);
+          setNotifications(prev => ({ ...prev, hotLeadAlerts: data.preferences.hotLeadAlerts ?? false }));
+          setAlertEmail(data.preferences.alertEmail || '');
         }
       }
     } catch (error) {
@@ -326,7 +328,7 @@ export default function SettingsPage() {
       const response = await fetch('/api/customer/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(notifications)
+        body: JSON.stringify({ hotLeadAlerts: notifications.hotLeadAlerts, alertEmail })
       });
 
       if (response.ok) {
@@ -1126,21 +1128,40 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 
-                <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-lg">
-                  <div>
-                    <h4 className="text-white font-medium">Hot Lead Alerts</h4>
-                    <p className="text-sm text-gray-400">Instant alerts for high-priority leads</p>
+                {/* Hot Lead Alerts — real, DB-backed */}
+                <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-white font-medium flex items-center gap-2">
+                        🔥 Hot Lead Alerts
+                        <span className="px-2 py-0.5 bg-violet-500/20 text-violet-300 text-xs rounded-full font-normal">Active</span>
+                      </h4>
+                      <p className="text-sm text-gray-400 mt-0.5">Get an email when the AI detects a hot lead on any channel</p>
+                    </div>
+                    <button
+                      onClick={() => setNotifications({...notifications, hotLeadAlerts: !notifications.hotLeadAlerts})}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
+                        notifications.hotLeadAlerts ? 'bg-violet-600' : 'bg-gray-700'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                        notifications.hotLeadAlerts ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setNotifications({...notifications, hotLeadAlerts: !notifications.hotLeadAlerts})}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-                      notifications.hotLeadAlerts ? 'bg-violet-600' : 'bg-gray-700'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      notifications.hotLeadAlerts ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
+                  {notifications.hotLeadAlerts && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1.5">Send alerts to this email</label>
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={alertEmail}
+                        onChange={e => setAlertEmail(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500 text-sm"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">Max 1 alert per 30 minutes to avoid spam. Covers Gmail, Outlook, SMS, Voice, and all other channels.</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-lg">

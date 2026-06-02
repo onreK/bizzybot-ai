@@ -6,6 +6,7 @@ import { checkEmailFilter } from '@/lib/email-filtering.js';
 import { generateGmailResponse } from '@/lib/ai-service.js';
 // 🎯 NEW IMPORT: Add the leads service for contact management
 import { createOrUpdateContact, trackLeadEventWithContact, updateLeadScoring } from '@/lib/leads-service.js';
+import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -602,6 +603,12 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
                         }
                       );
                       await updateLeadScoring(customerSettings.customer_id, contactResult.contact.id);
+                      await sendHotLeadAlert(customerSettings.clerk_user_id, {
+                        contactEmail: fromEmail,
+                        channel: 'email',
+                        message: emailText,
+                        score: hotLeadScore || 80,
+                      });
                     }
                   }
                 } catch (contactError) {
