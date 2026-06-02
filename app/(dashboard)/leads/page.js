@@ -444,8 +444,10 @@ export default function LeadsPage() {
                   const total = Object.values(channelStats).reduce((s, v) => s + v, 0);
                   const pct = Math.round((count / total) * 100);
                   const colors = {
-                    email: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                    email: 'bg-red-500/20 text-red-300 border-red-500/30',
+                    outlook: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
                     sms: 'bg-green-500/20 text-green-300 border-green-500/30',
+                    voice: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
                     chat: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
                     facebook: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
                     instagram: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
@@ -513,8 +515,10 @@ export default function LeadsPage() {
               style={{ colorScheme: 'dark' }}
             >
               <option value="all">All Channels</option>
-              <option value="email">Email</option>
+              <option value="email">Gmail</option>
+              <option value="outlook">Outlook</option>
               <option value="sms">SMS</option>
+              <option value="voice">Voice AI</option>
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="chat">Web Chat</option>

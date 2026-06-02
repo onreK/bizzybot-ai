@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
 import { generateAIResponse } from '@/lib/ai-service.js';
 import { checkEmailFilter } from '@/lib/email-filtering.js';
-import { createOrUpdateContact, trackLeadEventWithContact, updateLeadScoring } from '@/lib/leads-service.js';
+import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,21 +217,18 @@ async function processAccount(conn) {
       }
 
       // Track lead
-      await createOrUpdateContact({
-        clerkUserId: customer.clerk_user_id,
-        customerId: customer.id,
+      await createOrUpdateContact(customer.id, {
         email: fromEmail,
         name: fromName,
-        source: 'outlook',
+        source_channel: 'outlook',
       }).catch(() => {});
 
-      await trackLeadEventWithContact({
-        clerkUserId: customer.clerk_user_id,
-        customerId: customer.id,
-        contactEmail: fromEmail,
-        channel: 'email',
-        eventType: 'message_received',
-        content: bodyText,
+      await trackLeadEvent(customer.id, {
+        type: 'message_received',
+        channel: 'outlook',
+        email: fromEmail,
+        name: fromName,
+        message: bodyText,
       }).catch(() => {});
 
       if (aiResult.hotLead?.isHotLead) {

@@ -182,6 +182,15 @@ BizzyBot gives businesses an AI agent that:
 - [ ] Railway project rename to "bizzybot-ai" (manual in Railway dashboard)
 
 ### 🧪 Built but Untested — Test After Twilio A2P Approval
+- [ ] **Outlook email integration — full end-to-end test required**
+  - Connect Outlook account from Email → Setup page
+  - Send a test email to the connected Outlook address
+  - Wait for cron (top of hour) → confirm AI replied
+  - Check Email inbox → Outlook email appears with Outlook tag
+  - Click email → body + AI reply shown in detail panel
+  - Check Leads page → contact created from Outlook sender
+  - Verify `outlook_connections`, `outlook_conversations`, `outlook_messages` tables created in DB
+
 - [ ] **Vapi Voice AI — full end-to-end test required**
   - Assign SMS number → confirm Vapi assistant auto-provisions
   - Call the Twilio number → confirm AI answers with correct greeting
