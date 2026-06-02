@@ -24,11 +24,13 @@ export default function ConnectionsTab() {
 
   // Connection states
   const [gmailConnection, setGmailConnection] = useState({ connected: false, email: '' });
+  const [outlookConnection, setOutlookConnection] = useState({ connected: false, email: '' });
   const [domainConnection, setDomainConnection] = useState({ configured: false });
-  const [activeConnection, setActiveConnection] = useState('none'); // 'gmail', 'domain', or 'none'
-  
+  const [activeConnection, setActiveConnection] = useState('none');
+
   // Loading states
   const [loadingGmail, setLoadingGmail] = useState(false);
+  const [loadingOutlook, setLoadingOutlook] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [savingDomain, setSavingDomain] = useState(false);
   
@@ -48,13 +50,22 @@ export default function ConnectionsTab() {
 
   const loadConnectionStatus = async () => {
     try {
-      // Check Gmail connection status
-      const response = await fetch('/api/gmail/status');
-      if (response.ok) {
-        const data = await response.json();
+      const [gmailRes, outlookRes] = await Promise.all([
+        fetch('/api/gmail/status'),
+        fetch('/api/auth/outlook/status'),
+      ]);
+      if (gmailRes.ok) {
+        const data = await gmailRes.json();
         if (data.connected && data.connection) {
           setGmailConnection({ connected: true, email: data.connection.email });
           setActiveConnection('gmail');
+        }
+      }
+      if (outlookRes.ok) {
+        const data = await outlookRes.json();
+        if (data.connected) {
+          setOutlookConnection({ connected: true, email: data.email });
+          setActiveConnection('outlook');
         }
       }
     } catch (error) {
@@ -65,13 +76,17 @@ export default function ConnectionsTab() {
   const connectGmail = async () => {
     setLoadingGmail(true);
     try {
-      // Redirect to Gmail OAuth — include userId so it's stored correctly
       window.location.href = `/api/auth/google?userId=${user?.id || ''}`;
     } catch (error) {
       console.error('Error connecting Gmail:', error);
       setMessage({ type: 'error', text: 'Error connecting to Gmail. Please try again.' });
       setLoadingGmail(false);
     }
+  };
+
+  const connectOutlook = () => {
+    setLoadingOutlook(true);
+    window.location.href = '/api/auth/outlook';
   };
 
   const disconnectGmail = async () => {
@@ -168,32 +183,24 @@ export default function ConnectionsTab() {
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${
               gmailConnection.connected ? 'bg-green-500/20 border border-green-500/30' : 'bg-gray-500/20 border border-gray-500/30'
             }`}>
-              <Mail className={`w-6 h-6 ${
-                gmailConnection.connected ? 'text-green-400' : 'text-gray-400'
-              }`} />
+              <Mail className={`w-6 h-6 ${gmailConnection.connected ? 'text-green-400' : 'text-gray-400'}`} />
             </div>
             <p className="font-medium text-white">Gmail</p>
-            <p className={`text-sm ${
-              gmailConnection.connected ? 'text-green-400' : 'text-gray-400'
-            }`}>
+            <p className={`text-sm ${gmailConnection.connected ? 'text-green-400' : 'text-gray-400'}`}>
               {gmailConnection.connected ? 'Connected' : 'Not Connected'}
             </p>
           </div>
 
-          {/* Domain Email Status */}
+          {/* Outlook Status */}
           <div className="text-center">
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${
-              domainConnection.configured ? 'bg-green-500/20 border border-green-500/30' : 'bg-gray-500/20 border border-gray-500/30'
+              outlookConnection.connected ? 'bg-green-500/20 border border-green-500/30' : 'bg-gray-500/20 border border-gray-500/30'
             }`}>
-              <Globe className={`w-6 h-6 ${
-                domainConnection.configured ? 'text-green-400' : 'text-gray-400'
-              }`} />
+              <Mail className={`w-6 h-6 ${outlookConnection.connected ? 'text-green-400' : 'text-gray-400'}`} />
             </div>
-            <p className="font-medium text-white">Domain Email</p>
-            <p className={`text-sm ${
-              domainConnection.configured ? 'text-green-400' : 'text-gray-400'
-            }`}>
-              {domainConnection.configured ? 'Configured' : 'Not Configured'}
+            <p className="font-medium text-white">Outlook</p>
+            <p className={`text-sm ${outlookConnection.connected ? 'text-green-400' : 'text-gray-400'}`}>
+              {outlookConnection.connected ? 'Connected' : 'Not Connected'}
             </p>
           </div>
 
@@ -202,14 +209,10 @@ export default function ConnectionsTab() {
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${
               activeConnection !== 'none' ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-gray-500/20 border border-gray-500/30'
             }`}>
-              <Zap className={`w-6 h-6 ${
-                activeConnection !== 'none' ? 'text-blue-400' : 'text-gray-400'
-              }`} />
+              <Zap className={`w-6 h-6 ${activeConnection !== 'none' ? 'text-blue-400' : 'text-gray-400'}`} />
             </div>
             <p className="font-medium text-white">AI Status</p>
-            <p className={`text-sm ${
-              activeConnection !== 'none' ? 'text-blue-400' : 'text-gray-400'
-            }`}>
+            <p className={`text-sm ${activeConnection !== 'none' ? 'text-blue-400' : 'text-gray-400'}`}>
               {activeConnection !== 'none' ? 'Active' : 'Inactive'}
             </p>
           </div>
@@ -293,6 +296,58 @@ export default function ConnectionsTab() {
                 <LinkIcon className="w-4 h-4" />
               )}
               Connect Gmail Account
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Outlook Connection */}
+      <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="w-5 h-5 text-blue-400" />
+          <h3 className="text-lg font-semibold text-white">Outlook / Microsoft 365</h3>
+        </div>
+        <p className="text-gray-300 mb-6">Connect your Outlook or Microsoft 365 account for AI-powered email automation</p>
+
+        {outlookConnection.connected ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-green-500/20 border border-green-500/30 rounded-xl backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <div>
+                  <p className="font-medium text-green-300">Connected to Outlook</p>
+                  <p className="text-sm text-green-400">{outlookConnection.email}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={connectOutlook}
+                disabled={loadingOutlook}
+                variant="outline"
+                className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                {loadingOutlook ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Reconnect
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <Mail className="w-8 h-8 text-blue-400" />
+            </div>
+            <h4 className="text-lg font-medium text-white mb-2">Connect Your Outlook Account</h4>
+            <p className="text-gray-300 mb-6 max-w-md mx-auto">
+              Connect Outlook or Microsoft 365 to enable AI-powered email responses on your Microsoft inbox.
+            </p>
+            <Button
+              onClick={connectOutlook}
+              disabled={loadingOutlook}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loadingOutlook ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LinkIcon className="w-4 h-4" />}
+              Connect Outlook Account
             </Button>
           </div>
         )}
