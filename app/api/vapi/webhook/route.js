@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
+import crypto from 'crypto';
 
 export async function POST(request) {
   try {
+    // Verify Vapi sent this — reject anything without the shared secret
+    const incomingSecret = request.headers.get('x-vapi-secret');
+    const expectedSecret = process.env.VAPI_WEBHOOK_SECRET;
+    if (!expectedSecret || !incomingSecret ||
+        !crypto.timingSafeEqual(Buffer.from(incomingSecret), Buffer.from(expectedSecret))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { type, call } = body;
 
