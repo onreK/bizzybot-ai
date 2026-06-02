@@ -88,8 +88,10 @@ export default function CompleteEmailSystem() {
   
   const [conversations, setConversations] = useState([]);
   const [gmailEmails, setGmailEmails] = useState([]);
+  const [outlookEmails, setOutlookEmails] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedGmailEmail, setSelectedGmailEmail] = useState(null);
+  const [selectedOutlookEmail, setSelectedOutlookEmail] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [gmailLoading, setGmailLoading] = useState(false);
@@ -606,7 +608,8 @@ export default function CompleteEmailSystem() {
         loadEmailData(),
         checkGmailConnection(),
         loadAISettings(),
-        loadEmailSettings()  // ðŸŽ¯ NEW: Load email settings separately
+        loadEmailSettings(),
+        fetchOutlookEmails(),
       ]);
     } catch (error) {
       console.error('Error loading initial data:', error);
@@ -901,6 +904,16 @@ export default function CompleteEmailSystem() {
     } finally {
       if (!silent) setGmailLoading(false);
     }
+  };
+
+  const fetchOutlookEmails = async () => {
+    try {
+      const res = await fetch('/api/outlook/inbox');
+      if (res.ok) {
+        const data = await res.json();
+        setOutlookEmails(data.emails || []);
+      }
+    } catch {}
   };
 
   const sendAIResponse = async (emailId, preview = false) => {
@@ -1429,50 +1442,66 @@ export default function CompleteEmailSystem() {
                       </div>
                     ) : (
                       <div className="space-y-0">
-                        {gmailEmails.map((email, index) => (
-                          <div
-                            key={email.id}
-                            className={`p-4 border-b border-white/5 cursor-pointer transition-all duration-200 hover:bg-white/5 ${
-                              selectedGmailEmail?.id === email.id 
-                                ? 'bg-blue-500/20 border-l-4 border-l-blue-400 shadow-lg' 
-                                : ''
-                            } ${index === 0 ? 'border-t-0' : ''}`}
-                            onClick={() => {
-                              setSelectedGmailEmail(email);
-                              setSelectedConversation(null);
-                              setShowingPreview(false);  // Hide preview when selecting new email
-                              setPreviewResponse(null);
-                            }}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-sm text-white truncate flex-1 mr-2">
-                                {email.fromName || email.fromEmail}
-                              </h4>
-                              <div className="flex items-center gap-2">
-                                <div className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium">
-                                  Gmail
+                        {[
+                          ...gmailEmails.map(e => ({ ...e, source: 'gmail' })),
+                          ...outlookEmails,
+                        ]
+                          .sort((a, b) => new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0))
+                          .map((email, index) => {
+                            const isGmail = email.source === 'gmail';
+                            const isSelected = isGmail
+                              ? selectedGmailEmail?.id === email.id
+                              : selectedOutlookEmail?.id === email.id;
+                            return (
+                              <div
+                                key={email.id}
+                                className={`p-4 border-b border-white/5 cursor-pointer transition-all duration-200 hover:bg-white/5 ${
+                                  isSelected ? 'bg-blue-500/20 border-l-4 border-l-blue-400 shadow-lg' : ''
+                                } ${index === 0 ? 'border-t-0' : ''}`}
+                                onClick={() => {
+                                  if (isGmail) {
+                                    setSelectedGmailEmail(email);
+                                    setSelectedOutlookEmail(null);
+                                    setShowingPreview(false);
+                                    setPreviewResponse(null);
+                                  } else {
+                                    setSelectedOutlookEmail(email);
+                                    setSelectedGmailEmail(null);
+                                    setShowingPreview(false);
+                                  }
+                                  setSelectedConversation(null);
+                                }}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-semibold text-sm text-white truncate flex-1 mr-2">
+                                    {email.fromName || email.fromEmail}
+                                  </h4>
+                                  <div className="flex items-center gap-2">
+                                    {isGmail ? (
+                                      <div className="px-2 py-1 rounded-full bg-red-500/20 text-red-300 text-xs font-medium flex items-center gap-1">
+                                        <svg className="w-3 h-3" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                        Gmail
+                                      </div>
+                                    ) : (
+                                      <div className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium flex items-center gap-1">
+                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#0078D4"/><path d="M13 6h7v12h-7V6z" fill="#50D9FF" opacity=".8"/><path d="M4 8.5C4 7.12 5.12 6 6.5 6S9 7.12 9 8.5v7C9 16.88 7.88 18 6.5 18S4 16.88 4 15.5v-7z" fill="white"/><ellipse cx="6.5" cy="12" rx="2.5" ry="3.5" fill="#0078D4"/></svg>
+                                        Outlook
+                                      </div>
+                                    )}
+                                    {isSelected && <div className="w-2 h-2 rounded-full bg-blue-400" />}
+                                  </div>
                                 </div>
-                                {selectedGmailEmail?.id === email.id && (
-                                  <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-                                )}
+                                <p className="text-xs text-gray-300 font-medium mb-1 truncate">{email.subject}</p>
+                                <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
+                                  {email.snippet || email.body}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-gray-500">{email.receivedTime}</p>
+                                  <div className="text-xs text-gray-500">from {email.fromEmail?.split('@')[1] || 'unknown'}</div>
+                                </div>
                               </div>
-                            </div>
-                            <p className="text-xs text-gray-300 font-medium mb-1 truncate">
-                              {email.subject}
-                            </p>
-                            <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
-                              {email.snippet || email.body}
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-500">
-                                {email.receivedTime}
-                              </p>
-                              <div className="text-xs text-gray-500">
-                                from {email.fromEmail?.split('@')[1] || 'unknown'}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            );
+                          })}
                       </div>
                     )}
                   </div>
@@ -1583,7 +1612,48 @@ export default function CompleteEmailSystem() {
 
         {/* Email Details Panel - Keep all existing code */}
         <div className="lg:col-span-3 space-y-6">
-          {selectedGmailEmail ? (
+          {selectedOutlookEmail ? (
+            <div className="bg-[#161B22] rounded-xl border border-gray-800 h-[calc(100vh-480px)] min-h-[600px] flex flex-col">
+              <div className="p-6 pb-4 border-b border-white/10 flex-shrink-0">
+                <div className="flex items-center gap-3 text-lg font-semibold text-white mb-2">
+                  <Mail className="w-5 h-5 text-blue-400" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white truncate">{selectedOutlookEmail.fromName || selectedOutlookEmail.fromEmail}</div>
+                  </div>
+                  <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#0078D4"/><path d="M13 6h7v12h-7V6z" fill="#50D9FF" opacity=".8"/><path d="M4 8.5C4 7.12 5.12 6 6.5 6S9 7.12 9 8.5v7C9 16.88 7.88 18 6.5 18S4 16.88 4 15.5v-7z" fill="white"/><ellipse cx="6.5" cy="12" rx="2.5" ry="3.5" fill="#0078D4"/></svg>
+                    Outlook Inbox
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-300">
+                  <span className="font-medium">Subject:</span> {selectedOutlookEmail.subject}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">From: {selectedOutlookEmail.fromEmail}</p>
+              </div>
+              <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                <div className="bg-[#161B22] rounded-xl p-6 border border-gray-800">
+                  <p className="text-sm font-medium text-gray-300 mb-4 flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Email Content:
+                  </p>
+                  <div className="max-h-64 overflow-y-auto text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {selectedOutlookEmail.fullBody || 'No content available'}
+                  </div>
+                </div>
+                {selectedOutlookEmail.aiReply && (
+                  <div className="bg-green-500/10 rounded-xl p-6 border border-green-500/20">
+                    <p className="text-sm font-medium text-green-300 mb-4 flex items-center gap-2">
+                      <Bot className="w-4 h-4" />
+                      AI Reply Sent:
+                    </p>
+                    <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                      {selectedOutlookEmail.aiReply}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : selectedGmailEmail ? (
             <div className="bg-[#161B22] rounded-xl border border-gray-800 h-[calc(100vh-480px)] min-h-[600px] flex flex-col">
               <div className="p-6 pb-4 border-b border-white/10 flex-shrink-0">
                 <div className="flex items-center gap-3 text-lg font-semibold text-white mb-2">
