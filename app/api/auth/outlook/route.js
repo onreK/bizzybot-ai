@@ -1,24 +1,38 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
 const SCOPES = 'Mail.Read Mail.ReadWrite Mail.Send offline_access User.Read email';
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'anonymous';
+    const { userId } = auth();
+    if (!userId) return NextResponse.redirect(`${BASE_URL}/sign-in`);
 
     if (!process.env.MICROSOFT_CLIENT_ID) {
       return NextResponse.json({ error: 'Microsoft OAuth not configured' }, { status: 500 });
     }
 
+    // Generate a random nonce and bind it to the verified userId in a cookie
+    const nonce = crypto.randomBytes(32).toString('hex');
+    cookies().set('outlook_oauth_state', `${userId}:${nonce}`, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 600,
+      path: '/',
+    });
+
     const params = new URLSearchParams({
       client_id: process.env.MICROSOFT_CLIENT_ID,
       response_type: 'code',
-      redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/outlook/callback`,
+      redirect_uri: `${BASE_URL}/api/auth/outlook/callback`,
       scope: SCOPES,
-      state: userId,
+      state: nonce,
       prompt: 'consent',
       response_mode: 'query',
     });

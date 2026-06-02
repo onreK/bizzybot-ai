@@ -75,7 +75,7 @@ export default function EmailSetup() {
     if (outlookStatus.connected) {
       if (!confirm(`Outlook is connected to ${outlookStatus.email}.\n\nDisconnect and reconnect?`)) return;
     }
-    window.location.href = `/api/auth/outlook?userId=${user?.id || ''}`;
+    window.location.href = '/api/auth/outlook';
   };
 
   if (loading) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { query } from '@/lib/database.js';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,22 @@ export async function GET(request) {
     if (!code || !state) {
       return NextResponse.redirect(`${BASE_URL}/email/setup?error=missing_params`);
     }
+
+    // Verify state nonce from cookie — prevents CSRF / account takeover
+    const cookieStore = cookies();
+    const stateCookie = cookieStore.get('outlook_oauth_state')?.value;
+    cookieStore.delete('outlook_oauth_state');
+
+    if (!stateCookie) {
+      return NextResponse.redirect(`${BASE_URL}/email/setup?error=state_missing`);
+    }
+    const [cookieUserId, cookieNonce] = stateCookie.split(':');
+    if (!cookieNonce || cookieNonce !== state || !cookieUserId) {
+      return NextResponse.redirect(`${BASE_URL}/email/setup?error=state_mismatch`);
+    }
+
+    // Use the server-verified userId from the cookie — never trust the URL state param
+    const verifiedUserId = cookieUserId;
 
     // Exchange code for tokens
     const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -80,9 +97,9 @@ export async function GET(request) {
         microsoft_user_id  = EXCLUDED.microsoft_user_id,
         status             = 'connected',
         updated_at         = CURRENT_TIMESTAMP
-    `, [state, outlookEmail, tokens.access_token, tokens.refresh_token, tokenExpiry, profile.displayName, profile.id]);
+    `, [verifiedUserId, outlookEmail, tokens.access_token, tokens.refresh_token, tokenExpiry, profile.displayName, profile.id]);
 
-    console.log(`✅ Outlook connected for ${state}: ${outlookEmail}`);
+    console.log(`✅ Outlook connected for ${verifiedUserId}: ${outlookEmail}`);
 
     return NextResponse.redirect(
       `${BASE_URL}/email/setup?success=outlook_connected&email=${encodeURIComponent(outlookEmail)}`

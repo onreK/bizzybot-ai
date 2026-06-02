@@ -28,7 +28,7 @@ export default authMiddleware({
     // OAuth routes - MUST be public for OAuth flows to work
     "/api/auth/google(.*)",
     "/api/auth/facebook(.*)",
-    "/api/auth/outlook(.*)",
+    "/api/auth/outlook/callback",
     "/api/facebook/deauthorize",
     "/api/facebook/data-deletion",
     // Cron endpoint - protected by CRON_SECRET bearer token, not Clerk
