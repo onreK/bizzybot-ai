@@ -39,47 +39,6 @@ async function resolveCustomerFromTwilioNumber(toNumber) {
   }
 }
 
-// Send hot lead alert to business owner (unchanged)
-async function sendHotLeadAlert(customerConfig, leadInfo, messageContent) {
-  if (!twilioClient || !customerConfig.businessOwnerPhone || !customerConfig.enableHotLeadAlerts) {
-    return false;
-  }
-
-  // Check business hours if enabled
-  if (customerConfig.alertBusinessHours) {
-    const now = new Date();
-    const hour = now.getHours();
-    if (hour < 8 || hour > 18) { // Outside 8 AM - 6 PM
-      return false;
-    }
-  }
-
-  // Throttle alerts - max 1 per lead per 30 minutes
-  const throttleKey = `${customerConfig.phoneNumber}_${leadInfo.phone}`;
-  const lastAlert = customerConfigs.get(`${throttleKey}_last_alert`);
-  if (lastAlert && (Date.now() - lastAlert) < 30 * 60 * 1000) {
-    return false; // Skip if alerted within last 30 minutes
-  }
-
-  try {
-    const alertMessage = `🔥 HOT LEAD ALERT!\n\nScore: ${leadInfo.score}/10\nFrom: ${leadInfo.phone}\nMessage: "${messageContent.slice(0, 100)}${messageContent.length > 100 ? '...' : ''}"\n\nReason: ${leadInfo.reasoning}\n\n${customerConfig.businessName} AI Assistant`;
-
-    await twilioClient.messages.create({
-      body: alertMessage,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: customerConfig.businessOwnerPhone
-    });
-
-    // Update throttle timestamp
-    customerConfigs.set(`${throttleKey}_last_alert`, Date.now());
-    
-    console.log(`Hot lead alert sent to ${customerConfig.businessOwnerPhone}`);
-    return true;
-  } catch (error) {
-    console.error('Failed to send hot lead alert:', error);
-    return false;
-  }
-}
 
 export async function POST(request) {
   console.log('📱 === SMS WEBHOOK WITH CENTRALIZED AI SERVICE ===');
