@@ -28,13 +28,15 @@ export default authMiddleware({
     // OAuth routes - MUST be public for OAuth flows to work
     "/api/auth/google(.*)",
     "/api/auth/facebook(.*)",
+    "/api/auth/outlook(.*)",
     "/api/facebook/deauthorize",
     "/api/facebook/data-deletion",
     // Cron endpoint - protected by CRON_SECRET bearer token, not Clerk
     "/api/cron/run",
     "/api/stripe/webhook",
-    // Gmail monitor called internally by cron (no Clerk session available)
+    // Gmail + Outlook monitor called internally by cron (no Clerk session available)
     "/api/gmail/monitor",
+    "/api/outlook/monitor",
     // Vapi webhook — called by Vapi servers, no Clerk session
     "/api/vapi/webhook",
   ],
@@ -48,7 +50,8 @@ export default authMiddleware({
     "/api/auth/google",
     "/api/auth/google/callback",
     "/api/auth/google/status",
-    "/api/auth/facebook/callback"
+    "/api/auth/facebook/callback",
+    "/api/auth/outlook/callback"
   ]
 });
 

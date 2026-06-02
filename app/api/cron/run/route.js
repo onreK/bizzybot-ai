@@ -55,6 +55,44 @@ export async function POST(request) {
     console.error('❌ Gmail cron query failed:', err.message);
   }
 
+  // ── Outlook ──────────────────────────────────────────────────────────────
+  let outlookResults = [];
+  try {
+    const connections = await query(
+      `SELECT outlook_email FROM outlook_connections WHERE status = 'connected'`
+    ).catch(() => ({ rows: [] }));
+
+    console.log(`📧 Running Outlook check for ${connections.rows.length} connected account(s)`);
+
+    for (const conn of connections.rows) {
+      try {
+        const res = await fetch(`${baseUrl}/api/outlook/monitor`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`
+          },
+          body: JSON.stringify({ action: 'check', emailAddress: conn.outlook_email })
+        });
+
+        const data = await res.json();
+        outlookResults.push({
+          email: conn.outlook_email,
+          success: data.success ?? false,
+          processed: data.totalProcessed || 0,
+          error: data.error || null
+        });
+
+        console.log(`✅ Outlook ${conn.outlook_email}: processed=${data.totalProcessed || 0}`);
+      } catch (err) {
+        console.error(`❌ Outlook ${conn.outlook_email} failed:`, err.message);
+        outlookResults.push({ email: conn.outlook_email, success: false, error: err.message });
+      }
+    }
+  } catch (err) {
+    console.error('❌ Outlook cron query failed:', err.message);
+  }
+
   const summary = {
     success: true,
     ranAt: new Date().toISOString(),
@@ -64,6 +102,11 @@ export async function POST(request) {
       totalProcessed: gmailResults.reduce((n, r) => n + (r.processed || 0), 0),
       totalFollowupsSent: gmailResults.reduce((n, r) => n + (r.followupsSent || 0), 0),
       results: gmailResults
+    },
+    outlook: {
+      accounts: outlookResults.length,
+      totalProcessed: outlookResults.reduce((n, r) => n + (r.processed || 0), 0),
+      results: outlookResults
     }
   };
 
