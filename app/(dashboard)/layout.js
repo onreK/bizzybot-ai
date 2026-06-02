@@ -8,7 +8,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, BarChart3, Mail, Phone, MessageCircle,
   Facebook, Instagram, Settings, Bot, LogOut, Target,
-  Bell, Flame, X, Calendar
+  Bell, Flame, X, Calendar, Mic
 } from 'lucide-react';
 
 const NAV = [
@@ -32,6 +32,7 @@ const NAV = [
       { label: 'SMS', href: '/customer-sms-dashboard', icon: Phone },
       { label: 'Facebook', href: '/facebook', icon: Facebook },
       { label: 'Instagram', href: '/instagram', icon: Instagram },
+      { label: 'Voice AI', href: '/voice', icon: Mic },
       { label: 'Scheduling', href: '/scheduling', icon: Calendar },
       { label: 'Web Chat', href: '/web-chat', icon: MessageCircle },
     ]

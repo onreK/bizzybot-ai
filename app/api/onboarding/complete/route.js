@@ -4,7 +4,7 @@ import { query } from '@/lib/database.js';
 
 export const dynamic = 'force-dynamic';
 
-const CHANNELS = ['email', 'text', 'chatbot', 'facebook', 'instagram'];
+const CHANNELS = ['email', 'text', 'chatbot', 'facebook', 'instagram', 'voice'];
 
 export async function POST(request) {
   try {

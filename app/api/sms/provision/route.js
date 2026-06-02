@@ -78,6 +78,13 @@ export async function POST(request) {
     }
 
     console.log(`✅ Assigned ${number.phone_number} to customer ${userId}`);
+
+    // Fire-and-forget: provision Vapi voice assistant for this number
+    fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/vapi/provision`, {
+      method: 'POST',
+      headers: { Cookie: request.headers.get('cookie') || '' },
+    }).catch(err => console.error('⚠️ Vapi auto-provision failed:', err.message));
+
     return NextResponse.json({ success: true, phoneNumber: number.phone_number });
 
   } catch (error) {

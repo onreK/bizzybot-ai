@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Mail, Users, Star, Phone, MessageCircle,
+  Mail, Users, Star, Phone, MessageCircle, Mic,
   RefreshCw, Sliders, Shield, Bot, Cpu, Save,
   CheckCircle, AlertCircle, AlertTriangle, Clock, FileText
 } from 'lucide-react';
@@ -13,6 +13,7 @@ const TABS = [
   { id: 'instagram', label: 'Instagram',  icon: Star },
   { id: 'text',      label: 'Text/SMS',   icon: Phone },
   { id: 'chatbot',   label: 'Chatbot',    icon: MessageCircle },
+  { id: 'voice',     label: 'Voice AI',   icon: Mic },
 ];
 
 const DEFAULT_CHANNEL = {
@@ -217,7 +218,9 @@ export default function AISettingsPage() {
     instagram: { ...DEFAULT_CHANNEL, autoRespondDMs: false, autoRespondComments: false },
     text:      { ...DEFAULT_CHANNEL, enableAutoResponses: false, hotLeadDetection: false, responseDelay: '' },
     chatbot:   { ...DEFAULT_CHANNEL, proactiveEngagement: false, collectContactInfo: false },
+    voice:     { ...DEFAULT_CHANNEL, firstMessage: '' },
   });
+  const [voiceSyncing, setVoiceSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(true);
@@ -270,6 +273,33 @@ export default function AISettingsPage() {
       setMessage({ type: 'error', text: 'Error saving settings.' });
     } finally {
       setSaving(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    }
+  };
+
+  const saveVoice = async () => {
+    setSaving(true);
+    setVoiceSyncing(true);
+    setMessage({ type: '', text: '' });
+    try {
+      // 1. Save to DB (same as other channels)
+      await fetch('/api/ai-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel: 'voice', settings: settings.voice }),
+      });
+      // 2. Push updated settings to the Vapi assistant
+      const syncRes = await fetch('/api/vapi/provision', { method: 'PATCH' });
+      if (syncRes.ok) {
+        setMessage({ type: 'success', text: 'Voice AI settings saved and synced!' });
+      } else {
+        setMessage({ type: 'success', text: 'Settings saved. Voice AI will use them on next call.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Error saving settings.' });
+    } finally {
+      setSaving(false);
+      setVoiceSyncing(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
   };
@@ -459,15 +489,43 @@ export default function AISettingsPage() {
           </>
         )}
 
+        {activeTab === 'voice' && (
+          <>
+            <SharedFields channel="voice" ch={ch} update={update} accentColor="text-violet-400" />
+            <Section icon={Mic} iconColor="text-violet-400" title="Voice AI Configuration">
+              <p className="text-xs text-gray-500 mb-4">Customize how your AI greets callers and behaves on phone calls. Changes are synced to your live assistant.</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1.5">Greeting message <span className="text-gray-600">(what the AI says when it picks up)</span></label>
+                  <input
+                    placeholder={`e.g. Hi there! Thanks for calling ${ch.businessName || 'us'}. How can I help you today?`}
+                    value={ch.firstMessage || ''}
+                    onChange={e => update('voice', 'firstMessage', e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-3 text-xs text-gray-400 space-y-1">
+                  <p className="text-violet-400 font-medium">Voice AI tips</p>
+                  <p>Keep the greeting short — callers just want to know they reached the right place.</p>
+                  <p>The AI uses your Business Profile + Knowledge Base to answer questions naturally.</p>
+                  <p>Saving these settings also updates your live Vapi assistant immediately.</p>
+                </div>
+              </div>
+            </Section>
+          </>
+        )}
+
         {/* Save Button */}
         <div className="pt-2">
           <button
-            onClick={() => save(activeTab)}
+            onClick={() => activeTab === 'voice' ? saveVoice() : save(activeTab)}
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-700 text-white rounded-lg font-medium text-sm disabled:cursor-not-allowed transition-colors"
           >
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? 'Saving...' : `Save ${TABS.find(t => t.id === activeTab)?.label} Settings`}
+            {saving
+              ? (activeTab === 'voice' && voiceSyncing ? 'Syncing to Voice AI...' : 'Saving...')
+              : activeTab === 'voice' ? 'Save & Sync to Voice AI' : `Save ${TABS.find(t => t.id === activeTab)?.label} Settings`}
           </button>
 
           {message.text && (

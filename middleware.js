@@ -35,6 +35,8 @@ export default authMiddleware({
     "/api/stripe/webhook",
     // Gmail monitor called internally by cron (no Clerk session available)
     "/api/gmail/monitor",
+    // Vapi webhook — called by Vapi servers, no Clerk session
+    "/api/vapi/webhook",
   ],
   
   // Routes that are completely ignored by Clerk (no auth checks)
