@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { 
+import {
   TrendingUp, Activity, Target, DollarSign, Clock, Users,
   BarChart3, Zap, Phone, Calendar, MessageSquare, Award,
   ArrowUpRight, ArrowDownRight, RefreshCw, Download,
-  ChevronRight, AlertCircle, CheckCircle, Info
+  ChevronRight, AlertCircle, CheckCircle, Info, Mic, PhoneCall
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -476,6 +476,74 @@ export default function AnalyticsPage() {
                     </div>
                   );
                 })()}
+              </div>
+            )}
+
+            {/* Voice AI Performance */}
+            {analytics.voice && (
+              <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
+                <h3 className="text-xl font-semibold text-white mb-5 flex items-center gap-2">
+                  <Mic className="w-6 h-6 text-violet-400" />
+                  Voice AI Performance
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <PhoneCall className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs text-gray-400">Total Calls</span>
+                    </div>
+                    <div className="text-3xl font-bold text-white">
+                      {formatNumber(analytics.voice.totalCalls)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">this {period === 'all' ? 'time' : period}</div>
+                  </div>
+
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Phone className="w-4 h-4 text-green-400" />
+                      <span className="text-xs text-gray-400">Answered</span>
+                    </div>
+                    <div className="text-3xl font-bold text-green-400">
+                      {formatNumber(analytics.voice.answeredCalls)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {analytics.voice.totalCalls > 0
+                        ? `${Math.round((analytics.voice.answeredCalls / analytics.voice.totalCalls) * 100)}% answer rate`
+                        : 'no calls yet'}
+                    </div>
+                  </div>
+
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs text-gray-400">Minutes Talked</span>
+                    </div>
+                    <div className="text-3xl font-bold text-blue-400">
+                      {formatNumber(analytics.voice.totalMinutes)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">total this period</div>
+                  </div>
+
+                  <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-gray-400">Avg Duration</span>
+                    </div>
+                    <div className="text-3xl font-bold text-amber-400">
+                      {analytics.voice.avgDurationFormatted}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">per call</div>
+                  </div>
+                </div>
+
+                {analytics.voice.totalCalls === 0 && (
+                  <div className="mt-4 p-3 bg-violet-500/5 border border-violet-500/20 rounded-lg">
+                    <p className="text-xs text-gray-400">
+                      No voice calls yet for this period. Once Voice AI is active and calls come in,
+                      stats will appear here automatically.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
