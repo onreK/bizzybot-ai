@@ -6,7 +6,7 @@ import crypto from 'crypto';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
-const SCOPES = 'Mail.Read Mail.ReadWrite Mail.Send offline_access User.Read email';
+const SCOPES = 'Mail.Read Mail.ReadWrite Mail.Send offline_access User.Read email Calendars.ReadWrite';
 
 export async function GET() {
   try {

@@ -11,16 +11,17 @@ const oauth2Client = new google.auth.OAuth2(
   `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com'}/api/auth/google/callback`
 );
 
-// Gmail API scopes we need
-// Note: gmail.modify (mark as read / archive) intentionally excluded —
-// it's a restricted scope requiring a $15k+ security audit.
-// All modify calls in the app are cosmetic (inbox housekeeping only)
-// and are wrapped in try/catch so they fail gracefully without it.
+// Gmail + Google Calendar scopes
+// calendar and calendar.events added for the Google OAuth submission —
+// these will be verified by Google along with Gmail scopes.
+// Note: gmail.modify intentionally excluded (requires $15k+ security audit).
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/userinfo.profile'
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
 export async function GET(request) {
