@@ -81,7 +81,9 @@ BizzyBot gives businesses an AI agent that:
 | Payments | Stripe (webhooks + subscriptions) |
 | AI | OpenAI GPT-4o-mini |
 | SMS | Twilio |
-| Email | Gmail OAuth + Resend |
+| Email | Gmail OAuth + Outlook OAuth (Microsoft Graph) + Resend |
+| Voice AI | Vapi (BYON — Bring Your Own Number via Twilio) |
+| Calendar | Outlook Calendar (Microsoft Graph) — Google Calendar pending OAuth approval |
 | Social | Facebook Messenger + Instagram DM APIs |
 
 ---
@@ -132,12 +134,14 @@ BizzyBot gives businesses an AI agent that:
 - **Cron service:** `bizzybot-cron` — runs `0 * * * *`, calls `/api/cron/run`
 - **Twilio Messaging Service SID:** `MG7d1d710aa54c4ebab29ae4127f233a0b`
 - **Facebook App ID:** `1018657873452513`
+- **Microsoft Azure App:** `BizzyBot Ai` — Client ID: `e1f4b73a-dacf-4e67-b0d2-173120d0a7ba`, Tenant ID: `d0accbe0-735e-4a51-ac15-4c4725e3d858` (secret in Railway as `MICROSOFT_CLIENT_SECRET`, expires ~2028)
+- **Vapi:** `VAPI_PUBLIC_KEY` + `VAPI_PRIVATE_KEY` + `VAPI_WEBHOOK_SECRET` in Railway
 
 ---
 
 ## Database Tables
 
-`customers`, `conversations`, `messages`, `hot_leads`, `gmail_connections`, `gmail_conversations`, `gmail_messages`, `email_conversations`, `email_messages`, `ai_analytics_events`, `contacts`, `customer_phone_numbers`, `ai_channel_settings`, `facebook_connections`, `instagram_connections`
+`customers`, `conversations`, `messages`, `hot_leads`, `gmail_connections`, `gmail_conversations`, `gmail_messages`, `email_conversations`, `email_messages`, `ai_analytics_events`, `contacts`, `customer_phone_numbers`, `ai_channel_settings`, `facebook_connections`, `instagram_connections`, `outlook_connections`, `outlook_conversations`, `outlook_messages`, `vapi_call_logs`, `business_profiles`
 
 ---
 
@@ -151,28 +155,37 @@ BizzyBot gives businesses an AI agent that:
 - AI lead scoring (hot/warm/cold + urgency detection)
 - Email filtering (automated sender detection, subdomain checks)
 - Gmail OAuth — thread tracking, AI replies, conversation history, automated follow-ups, escalation handling
+- Outlook OAuth (Microsoft Graph) — email AI replies, cron polling, inbox view with Outlook tag
 - Twilio SMS — number pool provisioning, A2P architecture, AI responses, webhook routing
 - Facebook Messenger + Instagram DM — one-click OAuth connect, webhook handling
 - Embeddable web chat widget + `/web-chat` embed instructions page
-- Unified analytics dashboard (email/SMS/chat/social)
-- AI Settings page — 5-channel tabs, escalation, follow-ups, document link sending, custom instructions
+- Unified analytics dashboard — email/SMS/chat/social + Voice AI stats (calls, minutes, avg duration)
+- AI Settings page — 6-channel tabs (incl. Voice AI), escalation, follow-ups, document link sending
 - Document/form link sending — AI shares link naturally when lead is qualified
-- Lead management — hot/warm/cold filter, date filter, channel filter, sort direction, notes
+- Scheduling — customers paste any booking URL (Calendly, Acuity, etc.), AI shares it automatically
+- Outlook Calendar booking — AI checks availability, books directly on owner's calendar, sends invite to lead
+- Lead management — channel filter (Gmail/Outlook/SMS/Voice/Facebook/Instagram/Chat), hot/warm/cold, date filter
+- Owner hot lead alerts — email via Resend, DB-backed toggle per customer, 30-min dedup, covers all channels
 - Admin dashboard — MRR, ARR, trial tracking, churn, CSV export, customer search
 - Landing page — industry-leading design, social proof, pricing, testimonials
-- Railway cron job — Gmail automation runs hourly for all customers
+- Railway cron job — Gmail + Outlook automation runs hourly for all customers
 - Notification bell — live hot lead feed, unread count, mark-all-read
 - Dashboard — Setup Checklist, Today at a Glance, pipeline funnel, Hot Leads Trend chart
 - Logo — real BizzyBot logo in navbar, footer, sidebar
 - Privacy policy — CTIA SMS disclosure added
 - Terms of Service — SMS messaging section added
+- Voice AI (Vapi) — per-plan minute limits (Starter 15, Pro 100, Biz 400), upgrade prompt, voice tab in AI Settings
 
 ### ⏳ Waiting on External Approvals
-- **Twilio A2P campaign** — resubmitted 2026-05-30, approval 10-15 business days
+- **Twilio A2P campaign** — resubmitted 2026-06-03 (3rd attempt, updated opt-in/CTA fields), approval 10-15 business days
   - After approval: run `POST /api/admin/sms/buy-numbers` with `{ "quantity": 20 }`
-- **Meta App Review** — submitted 2026-05-31, approval 5-7 business days
-  - Still needs: screen recording + Loom upload, data handling section, reviewer instructions
+- **Meta App Review** — submitted 2026-05-31, still needs test user (Meta removed test accounts)
+  - Fix: add a real Facebook account as Tester in Meta App dashboard → use it to demo the app
   - Permissions: `instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments`
+- **Google OAuth brand verification** — brand approval pending; after approval, submit Gmail + Calendar scopes
+  - Calendar scopes already added to code (`auth/calendar`, `auth/calendar.events`) — ready to submit
+  - CASA audit may be required after brand approval (~$150-$500)
+  - Once approved: Gmail customers will also get calendar booking (Outlook calendar booking is live now)
 
 ### 🔄 Not Started / Planned
 - [ ] Referral tracking — credit referrer when `BIZZYFRIEND` coupon is used
@@ -203,6 +216,24 @@ BizzyBot gives businesses an AI agent that:
 ---
 
 ## Session Log
+
+### Session — 2026-06-03
+**Vapi Voice AI + Outlook email + Calendar booking + Analytics + Owner Alerts**
+
+- **Vapi Voice AI** — full build: `lib/vapi.js`, provision/webhook/stats APIs, `/voice` dashboard, Voice tab in AI Settings, per-plan minute limits (Starter 15/Pro 100/Biz 400), upgrade prompt, sidebar for all plans
+- **Outlook email** — full build: OAuth (Microsoft Graph), monitor (hourly cron), inbox merged with Gmail (Outlook tag), lead tracking with `channel='outlook'`, `outlook_connections`/`outlook_conversations`/`outlook_messages` tables
+- **Outlook Calendar booking** — AI checks owner's calendar availability, presents slots, detects `[BOOK:datetime]` marker, creates event + sends invite to lead; `Calendars.ReadWrite` added to Azure app
+- **Google Calendar scopes** — added to Gmail OAuth for upcoming brand verification submission
+- **Owner hot lead alerts** — `lib/owner-alerts.js` with Resend email, DB-backed toggle per customer (`hot_lead_alerts_enabled` + `alert_email` on customers), 30-min dedup, wired into Gmail/Outlook/SMS/Voice; replaced broken in-memory system
+- **Voice analytics** — `getVoiceStats()` in analytics service queries `vapi_call_logs` directly; Voice AI Performance card on analytics page (calls, minutes, avg duration, answer rate)
+- **Lead management** — added Outlook + Voice filters and color badges to leads page
+- **Twilio A2P** — resubmitted 3rd time with fixed opt-in description + CTA URL pointing to privacy page
+- **Microsoft Azure** — app registered (`BizzyBot Ai`), 6 permissions: Mail.Read/ReadWrite/Send, offline_access, User.Read, Calendars.ReadWrite
+- Key new files: `lib/vapi.js`, `lib/microsoft-calendar.js`, `lib/owner-alerts.js`, `app/api/vapi/*`, `app/api/outlook/*`, `app/api/auth/outlook/*`, `app/(dashboard)/voice/page.js`, `app/api/customer/notifications/route.js`
+
+**Next priorities:** Test Outlook + Voice once Twilio A2P approved · Referral tracking · Lead detail page · Plan gating audit
+
+---
 
 ### Session — 2026-05-31
 **Logo + Instagram OAuth fully working + App Review in progress**
