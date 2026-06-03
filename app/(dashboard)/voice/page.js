@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, PhoneCall, PhoneOff, Clock, Mic, RefreshCw, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Phone, PhoneCall, PhoneOff, Clock, Mic, RefreshCw, ChevronDown, ChevronUp, Zap, ArrowUpRight } from 'lucide-react';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '—';
@@ -137,9 +137,16 @@ export default function VoicePage() {
   }
 
   const minutesUsed = stats?.minutesUsed || 0;
-  const minutesLimit = stats?.minutesLimit || 400;
+  const minutesLimit = stats?.minutesLimit || 15;
   const minutesPct = Math.min(100, Math.round((minutesUsed / minutesLimit) * 100));
   const calls = stats?.calls || [];
+  const plan = stats?.plan || 'starter';
+  const isAtLimit = minutesUsed >= minutesLimit;
+
+  const UPGRADE_PLAN = { starter: 'Professional', professional: 'Business' };
+  const UPGRADE_MINUTES = { starter: 100, professional: 400 };
+  const nextPlan = UPGRADE_PLAN[plan];
+  const nextMinutes = UPGRADE_MINUTES[plan];
 
   return (
     <div className="p-8 space-y-6">
@@ -263,6 +270,7 @@ export default function VoicePage() {
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-violet-400" />
                 <span className="text-white font-medium text-sm">Minutes Used This Month</span>
+                <span className="px-2 py-0.5 bg-gray-800 text-gray-400 text-xs rounded-full capitalize">{plan}</span>
               </div>
               <span className="text-gray-400 text-sm">
                 <span className={minutesPct >= 90 ? 'text-red-400 font-semibold' : 'text-white'}>{minutesUsed}</span>
@@ -275,8 +283,29 @@ export default function VoicePage() {
                 style={{ width: `${minutesPct}%` }}
               />
             </div>
-            {minutesPct >= 90 && (
-              <p className="text-red-400 text-xs mt-2">You're close to your monthly limit. Contact support to increase it.</p>
+            {minutesPct >= 80 && nextPlan && (
+              <div className={`mt-3 flex items-center justify-between p-3 rounded-lg border ${
+                isAtLimit
+                  ? 'bg-red-500/10 border-red-500/20'
+                  : 'bg-amber-500/10 border-amber-500/20'
+              }`}>
+                <div>
+                  <p className={`text-xs font-medium ${isAtLimit ? 'text-red-400' : 'text-amber-400'}`}>
+                    {isAtLimit
+                      ? `You've used all ${minutesLimit} minutes on your ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
+                      : `Almost at your ${minutesLimit} min ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan limit`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Upgrade to {nextPlan} for {nextMinutes} minutes/mo
+                  </p>
+                </div>
+                <a
+                  href="/settings?tab=subscription"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0 ml-3"
+                >
+                  Upgrade <ArrowUpRight className="w-3 h-3" />
+                </a>
+              </div>
             )}
           </div>
 

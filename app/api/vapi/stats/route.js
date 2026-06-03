@@ -9,12 +9,17 @@ export async function GET() {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const VOICE_LIMITS = { starter: 15, professional: 100, business: 400 };
+
     const customerResult = await query(
-      `SELECT id FROM customers WHERE clerk_user_id = $1 LIMIT 1`, [userId]
+      `SELECT id, plan FROM customers WHERE clerk_user_id = $1 LIMIT 1`, [userId]
     ).catch(() => ({ rows: [] }));
 
-    const customerId = customerResult.rows[0]?.id;
-    if (!customerId) return NextResponse.json({ calls: [], minutesUsed: 0, minutesLimit: 400 });
+    const customer = customerResult.rows[0];
+    const customerId = customer?.id;
+    const minutesLimit = VOICE_LIMITS[customer?.plan] ?? 15;
+
+    if (!customerId) return NextResponse.json({ calls: [], minutesUsed: 0, minutesLimit: 15, plan: 'starter' });
 
     const firstOfMonth = new Date();
     firstOfMonth.setDate(1);
@@ -44,7 +49,8 @@ export async function GET() {
     return NextResponse.json({
       calls: logsResult.rows,
       minutesUsed,
-      minutesLimit: 400,
+      minutesLimit,
+      plan: customer?.plan || 'starter',
     });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

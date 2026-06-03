@@ -104,7 +104,7 @@ BizzyBot gives businesses an AI agent that:
 | Facebook Messenger AI | ❌ | ✅ | ✅ |
 | Instagram DM AI | ❌ | ✅ | ✅ |
 | Full analytics | ❌ | ✅ | ✅ |
-| AI Voice calls | ❌ | ❌ | ✅ |
+| AI Voice calls | ✅ (15 min/mo) | ✅ (100 min/mo) | ✅ (400 min/mo) |
 | AI responses/mo | 300 | 1,500 | 5,000 |
 | User seats | 1 | 2 | 5 |
 
