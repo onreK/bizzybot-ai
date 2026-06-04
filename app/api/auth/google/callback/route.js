@@ -122,6 +122,18 @@ export async function GET(request) {
       const savedConnection = dbResult.rows[0];
       console.log('✅ Gmail connection saved to database with ID:', savedConnection.id);
 
+      // Trigger immediate sync so emails appear right away instead of waiting for the cron
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
+      fetch(`${baseUrl}/api/gmail/monitor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+        },
+        body: JSON.stringify({ action: 'check', emailAddress: userEmail, actualSend: true }),
+      }).catch(e => console.error('⚠️ Initial Gmail sync error (non-fatal):', e.message));
+      console.log('🔄 Initial Gmail sync triggered for:', userEmail);
+
     } catch (dbError) {
       console.error('⚠️ Database save failed, using memory fallback:', dbError.message);
     }
