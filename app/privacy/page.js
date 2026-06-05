@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-white mb-3">Privacy Policy</h1>
-          <p className="text-gray-500 text-sm">Last updated: May 26, 2026 · Effective: May 26, 2026</p>
+          <p className="text-gray-500 text-sm">Last updated: June 5, 2026 · Effective: June 5, 2026</p>
         </div>
 
         <div className="space-y-10 text-[15px] leading-relaxed">
@@ -258,6 +258,55 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold text-white mb-4">11. Changes to This Policy</h2>
             <p>
               We may update this Privacy Policy from time to time. When we make material changes, we will notify you by email (at the address on your account) and update the "Last updated" date at the top of this page. Your continued use of the Service after changes become effective constitutes your acceptance of the updated policy.
+            </p>
+          </section>
+
+          {/* 13 — SMS Messaging Terms (required for CTIA / Twilio A2P compliance) */}
+          <section id="sms-terms" className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-6">
+            <h2 className="text-xl font-semibold text-white mb-1">13. SMS Messaging Terms</h2>
+            <p className="text-xs text-blue-400 mb-4 uppercase tracking-widest font-medium">CTIA Compliant · A2P 10DLC</p>
+
+            <h3 className="text-base font-semibold text-gray-200 mb-2">How consumers opt in</h3>
+            <p className="mb-4">
+              All SMS conversations through BizzyBot AI are <strong className="text-gray-200">consumer-initiated (mobile-originated)</strong>. A consumer opts in by texting a business's BizzyBot-powered phone number directly. No messages are sent to a consumer unless they text first.
+            </p>
+            <p className="mb-4">
+              Businesses using BizzyBot AI are required by our{' '}
+              <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">Terms of Service</a>{' '}
+              to display CTIA-compliant opt-in disclosure language to consumers before they text — for example, on their website, in-store signage, or marketing materials.
+            </p>
+
+            <div className="rounded-lg border border-white/10 bg-[#0D1421] p-4 mb-4">
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-2">Example opt-in disclosure businesses must display:</p>
+              <p className="text-gray-200 text-sm leading-relaxed">
+                "Text <strong>START</strong> to <strong>[phone number]</strong> to connect with [Business Name] via BizzyBot AI. You will receive automated replies to your inquiry. Message frequency varies. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out at any time. Reply <strong>HELP</strong> for help. No purchase required."
+              </p>
+            </div>
+
+            <h3 className="text-base font-semibold text-gray-200 mb-2">Standard messaging keywords</h3>
+            <ul className="mb-4 space-y-2 pl-4 text-sm">
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span><strong className="text-gray-200">STOP / UNSUBSCRIBE / CANCEL / QUIT / END</strong> — Immediately unsubscribes the consumer. No further messages will be sent.</span></li>
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span><strong className="text-gray-200">HELP / INFO</strong> — Returns a help message with the business name and opt-out instructions.</span></li>
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span><strong className="text-gray-200">START / JOIN</strong> — Re-subscribes a consumer who previously opted out.</span></li>
+            </ul>
+
+            <h3 className="text-base font-semibold text-gray-200 mb-2">What every message includes</h3>
+            <ul className="mb-4 space-y-1.5 pl-4 text-sm">
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span>Identification of the business the consumer contacted.</span></li>
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span>STOP opt-out instructions in every outbound message.</span></li>
+              <li className="flex gap-2"><span className="text-blue-400 mt-0.5">•</span><span>"Msg &amp; data rates may apply" disclosure.</span></li>
+            </ul>
+
+            <h3 className="text-base font-semibold text-gray-200 mb-2">What we never do</h3>
+            <ul className="mb-4 space-y-1.5 pl-4 text-sm">
+              <li className="flex gap-2"><span className="text-red-400 mt-0.5">✗</span><span>We do <strong className="text-gray-200">not</strong> send unsolicited outbound marketing messages.</span></li>
+              <li className="flex gap-2"><span className="text-red-400 mt-0.5">✗</span><span>We do <strong className="text-gray-200">not</strong> share or sell mobile phone numbers or SMS content to third parties for marketing purposes.</span></li>
+              <li className="flex gap-2"><span className="text-red-400 mt-0.5">✗</span><span>We do <strong className="text-gray-200">not</strong> send messages to consumers who have replied STOP.</span></li>
+            </ul>
+
+            <p className="text-sm text-gray-400">
+              For questions about SMS messaging, contact{' '}
+              <a href="mailto:support@bizzybotai.com" className="text-blue-400 hover:text-blue-300">support@bizzybotai.com</a>.
             </p>
           </section>
 
