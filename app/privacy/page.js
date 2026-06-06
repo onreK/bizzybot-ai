@@ -143,7 +143,7 @@ export default function PrivacyPolicy() {
 
             <h3 className="text-base font-semibold text-gray-200 mb-2">4.0 SMS / Mobile Data</h3>
             <p className="mb-4">
-              Mobile information — including phone numbers, SMS message content, and opt-in/opt-out status — is <strong className="text-gray-200">never shared with third parties for marketing or promotional purposes</strong>. This data is used solely to deliver AI-powered SMS responses on behalf of businesses using the BizzyBot platform. All mobile messaging is conducted in compliance with CTIA guidelines and applicable carrier requirements.
+              Mobile information — including phone numbers, SMS message content, and opt-in/opt-out status — is <strong className="text-gray-200">never shared with third parties or affiliates for marketing or promotional purposes</strong>. This data is used solely to deliver AI-powered SMS responses on behalf of businesses using the BizzyBot platform. All mobile messaging is conducted in compliance with CTIA guidelines and applicable carrier requirements.
             </p>
 
             <h3 className="text-base font-semibold text-gray-200 mb-2">4.1 Service Providers</h3>
