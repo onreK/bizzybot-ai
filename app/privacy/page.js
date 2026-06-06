@@ -268,18 +268,16 @@ export default function PrivacyPolicy() {
 
             <h3 className="text-base font-semibold text-gray-200 mb-2">How consumers opt in</h3>
             <p className="mb-4">
-              All SMS conversations through BizzyBot AI are <strong className="text-gray-200">consumer-initiated (mobile-originated)</strong>. A consumer opts in by texting a business's BizzyBot-powered phone number directly. No messages are sent to a consumer unless they text first.
+              All SMS conversations through BizzyBot AI are <strong className="text-gray-200">consumer-initiated (mobile-originated)</strong>. A consumer opts in by texting a business's BizzyBot-powered phone number directly. The consumer initiates all contact — no messages are ever sent to a consumer unless they text first.
             </p>
             <p className="mb-4">
-              Businesses using BizzyBot AI are required by our{' '}
-              <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">Terms of Service</a>{' '}
-              to display CTIA-compliant opt-in disclosure language to consumers before they text — for example, on their website, in-store signage, or marketing materials.
+              The act of texting a business's BizzyBot number constitutes consent to receive automated AI replies to that inquiry. The business's phone number is publicly listed on their website, Google Business profile, or other business directories. A consumer who chooses to text that number is initiating the conversation and consenting to a reply.
             </p>
 
             <div className="rounded-lg border border-white/10 bg-[#0D1421] p-4 mb-4">
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-2">Example opt-in disclosure businesses must display:</p>
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-2">How a typical consumer opt-in works:</p>
               <p className="text-gray-200 text-sm leading-relaxed">
-                "Text <strong>START</strong> to <strong>[phone number]</strong> to connect with [Business Name] via BizzyBot AI. You will receive automated replies to your inquiry. Message frequency varies. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out at any time. Reply <strong>HELP</strong> for help. No purchase required."
+                A consumer sees a business's phone number on their website or Google listing (e.g., "Call or text us: [number]"). The consumer chooses to text that number with a question. BizzyBot's AI replies to that inquiry. Every reply includes STOP opt-out instructions and "Msg &amp; data rates may apply."
               </p>
             </div>
 
