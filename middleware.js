@@ -25,6 +25,7 @@ export default authMiddleware({
     "/pricing",
     "/privacy",
     "/terms",
+    "/sms-optin-example",
     // OAuth routes - MUST be public for OAuth flows to work
     "/api/auth/google(.*)",
     "/api/auth/facebook(.*)",
