@@ -27,6 +27,17 @@ async function ensureColumns() {
     `ALTER TABLE customers ADD COLUMN IF NOT EXISTS churned_at TIMESTAMP`,
     `ALTER TABLE customers ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP`,
     `ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`,
+    `CREATE TABLE IF NOT EXISTS business_profiles (id SERIAL PRIMARY KEY, customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE, industry VARCHAR(100), website VARCHAR(255), phone VARCHAR(50), address VARCHAR(255), city VARCHAR(100), state VARCHAR(50), zip_code VARCHAR(20), country VARCHAR(100), employee_count VARCHAR(20), description TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(customer_id))`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS industry VARCHAR(100)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS website VARCHAR(255)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address VARCHAR(255)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS city VARCHAR(100)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS state VARCHAR(50)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS zip_code VARCHAR(20)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS country VARCHAR(100)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS employee_count VARCHAR(20)`,
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS description TEXT`,
   ];
   for (const sql of cols) {
     try { await query(sql); } catch (_) {}
