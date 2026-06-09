@@ -183,10 +183,12 @@ BizzyBot gives businesses an AI agent that:
 
 ### ⏳ Waiting on External Approvals
 - **Twilio A2P campaign** — 6 rejections all for "CTA verification", Twilio support ticket submitted 2026-06-08
-  - Root cause: TCR reviewer cannot physically verify the opt-in CTA (ISV/platform structure + fake phone number in example page)
-  - Built `/sms-optin-example` page (public, no login) as verifiable CTA URL
-  - Awaiting Twilio support response — do NOT resubmit until they reply
-  - After approval: run `POST /api/admin/sms/buy-numbers` with `{ "quantity": 20 }`
+  - TRUE ROOT CAUSE: BizzyBot is an ISV/SaaS platform — ONE campaign cannot cover ALL customer businesses
+  - TCR expects each business to have its own brand + campaign registration (this is how GoHighLevel, Podium etc. work — they automate it via API invisibly)
+  - Do NOT resubmit the current campaign manually — it will keep failing
+  - Awaiting Twilio support response — they will confirm the ISV path forward
+  - Future build needed: per-customer auto-registration via Twilio API (when customer activates SMS in dashboard, code registers their brand + campaign automatically — do NOT build yet)
+  - After A2P resolved: run `POST /api/admin/sms/buy-numbers` with `{ "quantity": 20 }`
   - Messaging Service SID: `MG7d1d710aa54c4ebab29ae4127f233a0b`
 - **Meta App Review** — submitted 2026-05-31, Business verified as Tech Provider 2026-06-05
   - Still needs a real Facebook test user — add real FB account as Tester in Meta App dashboard
