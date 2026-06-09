@@ -151,6 +151,11 @@ BizzyBot gives businesses an AI agent that:
 - Multi-tenant auth (Clerk) + onboarding flow (5 steps)
 - Stripe billing — 3 tiers ($29/$69/$199), 14-day trial, webhooks, plan-gating
 - Stripe coupons: BIZZYFOUNDER + BIZZYFRIEND
+- Plan gating — switched from channel-blocking to shared response pool; all channels available on all plans, limits are response count (300/1500/5000) + voice minutes (15/100/400)
+- Privacy policy — Section 13 SMS Messaging Terms added with anchor `#sms-terms`, CTIA-compliant language including "affiliates"
+- `/sms-optin-example` — public page showing consumer opt-in flow for Twilio CTA verification
+- Gmail OAuth — immediate sync triggered after connection (no longer waits for hourly cron)
+- Admin dashboard — fixed `business_profiles` missing columns error
 - PostgreSQL schema + admin migration tools
 - AI lead scoring (hot/warm/cold + urgency detection)
 - Email filtering (automated sender detection, subdomain checks)
@@ -177,15 +182,20 @@ BizzyBot gives businesses an AI agent that:
 - Voice AI (Vapi) — per-plan minute limits (Starter 15, Pro 100, Biz 400), upgrade prompt, voice tab in AI Settings
 
 ### ⏳ Waiting on External Approvals
-- **Twilio A2P campaign** — resubmitted 2026-06-03 (3rd attempt, updated opt-in/CTA fields), approval 10-15 business days
+- **Twilio A2P campaign** — 6 rejections all for "CTA verification", Twilio support ticket submitted 2026-06-08
+  - Root cause: TCR reviewer cannot physically verify the opt-in CTA (ISV/platform structure + fake phone number in example page)
+  - Built `/sms-optin-example` page (public, no login) as verifiable CTA URL
+  - Awaiting Twilio support response — do NOT resubmit until they reply
   - After approval: run `POST /api/admin/sms/buy-numbers` with `{ "quantity": 20 }`
-- **Meta App Review** — submitted 2026-05-31, still needs test user (Meta removed test accounts)
-  - Fix: add a real Facebook account as Tester in Meta App dashboard → use it to demo the app
+  - Messaging Service SID: `MG7d1d710aa54c4ebab29ae4127f233a0b`
+- **Meta App Review** — submitted 2026-05-31, Business verified as Tech Provider 2026-06-05
+  - Still needs a real Facebook test user — add real FB account as Tester in Meta App dashboard
   - Permissions: `instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments`
-- **Google OAuth brand verification** — brand approval pending; after approval, submit Gmail + Calendar scopes
-  - Calendar scopes already added to code (`auth/calendar`, `auth/calendar.events`) — ready to submit
-  - CASA audit may be required after brand approval (~$150-$500)
-  - Once approved: Gmail customers will also get calendar booking (Outlook calendar booking is live now)
+- **Google OAuth brand verification** — blocked on "App functionality" — reviewer can't test Gmail sync
+  - Replied to Google Trust & Safety email 2026-06-08 with testing instructions + test account credentials
+  - Gmail now syncs immediately after OAuth connection (no longer waits for hourly cron)
+  - Homepage ✅ + Branding ✅ passed; App functionality ❌ pending re-review
+  - After approval: submit Gmail + Calendar scopes; CASA audit may be required (~$150-$500)
 
 ### 🔄 Not Started / Planned
 - [ ] Referral tracking — credit referrer when `BIZZYFRIEND` coupon is used
@@ -216,6 +226,21 @@ BizzyBot gives businesses an AI agent that:
 ---
 
 ## Session Log
+
+### Session — 2026-06-04 to 2026-06-08
+**Plan gating · Twilio A2P · Google OAuth · Vapi audit · Admin fixes**
+
+- **Plan gating audit** — switched from channel-blocking model to shared response pool; all channels (FB, Instagram, Voice, SMS, Email, Chat) now available on all plans; limits are response count + voice minutes only; updated `lib/stripe.js`, `lib/usage.js`, landing page, pricing page
+- **Vapi audit** — confirmed using GPT 4o Mini Cluster (gpt-4o-mini, ~390ms model latency, ~900ms total); correct choice, no code changes needed
+- **Twilio A2P** — 6th rejection (CTA verification); built `/sms-optin-example` public page; added Section 13 to privacy page with `#sms-terms` anchor and CTIA "affiliates" language; submitted Twilio support ticket 2026-06-08; do NOT resubmit until Twilio responds
+- **Google OAuth** — reviewer blocked on "Email Conversations do not sync"; fixed by triggering immediate Gmail sync after OAuth callback (`fetch` to monitor route fire-and-forget); replied to Google Trust & Safety with step-by-step testing instructions + test account credentials
+- **Email filter** — softened `Feedback-ID` header check from hard-block to pass-through to AI classifier; prevents false positives on Google Workspace emails
+- **Meta** — Bizzy Bot Ai LLC verified as Tech Provider 2026-06-05; App Review still pending test user
+- **Admin dashboard** — fixed "column bp.customer_id does not exist" error; `ensureColumns()` now auto-creates/patches `business_profiles` table
+- **Commit workflow** — confirmed: commit directly to main, no branches/PRs
+- Key new files: `app/sms-optin-example/page.js`
+
+**Next priorities:** Wait for Twilio support response · Wait for Google re-review · Add real FB test user for Meta · Referral tracking
 
 ### Session — 2026-06-03
 **Vapi Voice AI + Outlook email + Calendar booking + Analytics + Owner Alerts**
