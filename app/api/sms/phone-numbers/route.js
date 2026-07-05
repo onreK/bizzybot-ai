@@ -63,9 +63,9 @@ export async function POST(request) {
     }
 
     if (action === 'purchase') {
-      // Search for available phone numbers
-      const availableNumbers = await twilioClient.availablePhoneNumbers('US').local.list({
-        areaCode: phoneNumber?.areaCode || undefined,
+      // Search for available toll-free phone numbers (no A2P 10DLC needed)
+      const availableNumbers = await twilioClient.availablePhoneNumbers('US').tollFree.list({
+        smsEnabled: true,
         limit: 10
       });
 

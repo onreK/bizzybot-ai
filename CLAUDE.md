@@ -182,13 +182,12 @@ BizzyBot gives businesses an AI agent that:
 - Voice AI (Vapi) — per-plan minute limits (Starter 15, Pro 100, Biz 400), upgrade prompt, voice tab in AI Settings
 
 ### ⏳ Waiting on External Approvals
-- **Twilio A2P campaign** — 6 rejections all for "CTA verification", Twilio support ticket submitted 2026-06-08
-  - TRUE ROOT CAUSE: BizzyBot is an ISV/SaaS platform — ONE campaign cannot cover ALL customer businesses
-  - TCR expects each business to have its own brand + campaign registration (this is how GoHighLevel, Podium etc. work — they automate it via API invisibly)
-  - Do NOT resubmit the current campaign manually — it will keep failing
-  - Awaiting Twilio support response — they will confirm the ISV path forward
-  - Future build needed: per-customer auto-registration via Twilio API (when customer activates SMS in dashboard, code registers their brand + campaign automatically — do NOT build yet)
-  - After A2P resolved: run `POST /api/admin/sms/buy-numbers` with `{ "quantity": 20 }`
+- **Twilio SMS — PIVOTED TO TOLL-FREE (2026-07-05)** — the A2P 10DLC campaign path is abandoned
+  - Old A2P campaign had 6 rejections; root cause: ISVs need per-customer brand+campaign registration (10-15 day waits, fees, high rejection risk for sole props) — not viable for BizzyBot's onboarding
+  - NEW ARCHITECTURE: toll-free numbers bought on demand at signup (no pool), toll-free verification auto-submitted per customer via API (~3-5 business day approval, no TCR/brand/campaign needed)
+  - Built: `lib/tollfree-verification.js` (submit + hourly status check + emails), on-demand purchase in `/api/sms/provision`, TFV polling in cron
+  - Still to build: SMS onboarding page rework (replace fake demo flow, collect business address for verification) — see Session Log 2026-07-05
+  - Hosted SMS (customer keeps existing landline/800 number) planned as core path v1.1 — Hosted Numbers API access must be requested from Twilio (support ticket; API is in Developer Preview)
   - Messaging Service SID: `MG7d1d710aa54c4ebab29ae4127f233a0b`
 - **Meta App Review** — submitted 2026-05-31, Business verified as Tech Provider 2026-06-05
   - Still needs a real Facebook test user — add real FB account as Tester in Meta App dashboard
@@ -228,6 +227,21 @@ BizzyBot gives businesses an AI agent that:
 ---
 
 ## Session Log
+
+### Session — 2026-07-05
+**Toll-free SMS pivot — on-demand numbers + auto-verification**
+
+- **Decision:** abandoned A2P 10DLC (per-customer TCR registration not viable); pivoted to toll-free numbers — instant purchase, per-number verification (~3-5 business days), no brand/campaign/EIN needed. Sole-prop friendly (Facebook page accepted as website).
+- **No number pool** — numbers bought on demand when a customer provisions SMS (founder decision: reduce carrying cost)
+- **New:** `lib/tollfree-verification.js` — submits TFV via Twilio API using customer's business profile + standardized CTIA template (reuses `/sms-optin-example` + `/privacy#sms-terms`); hourly cron polls status; approval → customer "You're live" email (Resend); rejection → admin email (7-day resubmit window)
+- **Rewritten:** `/api/sms/provision` — buys toll-free on demand, enrolls in Messaging Service, submits TFV (or records `needs_info` if profile missing address/website), provisions Vapi
+- **DB:** `customer_phone_numbers` gains `tfv_sid`, `tfv_status`, `tfv_submitted_at`, `tfv_approved_at`, `tfv_rejection_reason` (auto-created columns)
+- **Deleted demo code:** `api/customer-sms/{available-numbers,purchase-number,activate,test}`, `api/admin/sms/buy-numbers` (pool), `app/sms-setup` (template relic). Kept `customer-sms/configure-ai` (live SMS dashboard still calls it).
+- **Switched remaining number searches** local → toll-free ($2.15/mo)
+- **Discovered:** `app/sms-onboarding/page.js` is a FAKE flow (simulated success, no API calls) — linked from live dashboard; rework is the next step
+- **Hosted SMS (existing numbers):** decided as core near-term feature ("AI answers the number on your van"); request Hosted Numbers API preview access from Twilio (Console support ticket or hostedsms@twilio.com — include Account SID)
+
+**Next priorities:** Rework sms-onboarding page (real provision call + address collection for TFV) · Request Hosted Numbers API access · Meta App Review · Google re-review
 
 ### Session — 2026-06-04 to 2026-06-08
 **Plan gating · Twilio A2P · Google OAuth · Vapi audit · Admin fixes**

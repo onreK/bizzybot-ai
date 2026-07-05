@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import twilio from 'twilio';
 import { query } from '@/lib/database.js';
+import { submitTollfreeVerification } from '@/lib/tollfree-verification.js';
 
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -24,60 +25,100 @@ async function ensureTable() {
   `).catch(() => {});
 }
 
-// POST: assign a number from the pool to the calling customer
+// POST: buy a toll-free number on demand for the calling customer,
+// then auto-submit toll-free verification with their business info.
+// Numbers are purchased as needed — no pre-bought pool.
 export async function POST(request) {
   try {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    if (!twilioClient) {
+      return NextResponse.json({ error: 'SMS service not configured' }, { status: 500 });
+    }
+
     await ensureTable();
 
     // Already has a number — return it
     const existing = await query(
-      `SELECT phone_number FROM customer_phone_numbers WHERE clerk_user_id = $1 AND status = 'active' LIMIT 1`,
+      `SELECT phone_number, twilio_sid, tfv_status FROM customer_phone_numbers
+       WHERE clerk_user_id = $1 AND status = 'active' LIMIT 1`,
       [userId]
-    );
+    ).catch(async () => {
+      // tfv columns may not exist yet on first run
+      return query(
+        `SELECT phone_number, twilio_sid FROM customer_phone_numbers
+         WHERE clerk_user_id = $1 AND status = 'active' LIMIT 1`,
+        [userId]
+      );
+    });
     if (existing.rows.length > 0) {
-      return NextResponse.json({ success: true, phoneNumber: existing.rows[0].phone_number, alreadyAssigned: true });
+      return NextResponse.json({
+        success: true,
+        phoneNumber: existing.rows[0].phone_number,
+        verificationStatus: existing.rows[0].tfv_status || null,
+        alreadyAssigned: true
+      });
     }
 
-    // Grab the oldest available number from the pool
-    const available = await query(
-      `SELECT id, phone_number, twilio_sid FROM customer_phone_numbers
-       WHERE status = 'available' ORDER BY created_at ASC LIMIT 1`
+    const customerResult = await query(
+      `SELECT id, business_name FROM customers WHERE clerk_user_id = $1 LIMIT 1`, [userId]
     );
+    const customer = customerResult.rows[0];
+    const customerId = customer?.id;
 
-    if (available.rows.length === 0) {
+    // Buy a toll-free number on demand (no A2P 10DLC needed — verification
+    // is submitted per-number below and takes ~3-5 business days)
+    const found = await twilioClient.availablePhoneNumbers('US').tollFree.list({
+      smsEnabled: true,
+      limit: 1
+    });
+    if (!found.length) {
       return NextResponse.json({
         success: false,
-        error: 'No phone numbers available right now. Please contact support@bizzybotai.com.'
+        error: 'No toll-free numbers available right now. Please contact support@bizzybotai.com.'
       }, { status: 503 });
     }
 
-    const number = available.rows[0];
+    const bought = await twilioClient.incomingPhoneNumbers.create({
+      phoneNumber: found[0].phoneNumber,
+      friendlyName: customer?.business_name ? `BizzyBot — ${customer.business_name}` : 'BizzyBot Customer',
+      smsUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/sms/webhook`,
+      smsMethod: 'POST'
+    });
 
-    const customerResult = await query(
-      `SELECT id FROM customers WHERE clerk_user_id = $1 LIMIT 1`, [userId]
-    );
-    const customerId = customerResult.rows[0]?.id;
-
-    await query(
-      `UPDATE customer_phone_numbers
-       SET status = 'active', clerk_user_id = $1, customer_id = $2,
-           assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3`,
-      [userId, customerId, number.id]
-    );
-
-    // Point the Twilio number's webhook at BizzyBot's SMS handler
-    if (twilioClient && number.twilio_sid) {
-      await twilioClient.incomingPhoneNumbers(number.twilio_sid).update({
-        smsUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/sms/webhook`,
-        smsMethod: 'POST'
-      }).catch(err => console.error('⚠️ Twilio webhook update failed:', err.message));
+    // Enroll in the Messaging Service (sticky sender + unified sending)
+    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+    if (messagingServiceSid) {
+      await twilioClient.messaging.v1.services(messagingServiceSid).phoneNumbers.create({
+        phoneNumberSid: bought.sid
+      }).catch(err => console.error('⚠️ Messaging Service enroll failed:', err.message));
     }
 
-    console.log(`✅ Assigned ${number.phone_number} to customer ${userId}`);
+    await query(
+      `INSERT INTO customer_phone_numbers
+         (phone_number, twilio_sid, friendly_name, status, clerk_user_id, customer_id, assigned_at)
+       VALUES ($1, $2, $3, 'active', $4, $5, CURRENT_TIMESTAMP)
+       ON CONFLICT (phone_number) DO UPDATE SET
+         status = 'active', clerk_user_id = $4, customer_id = $5,
+         assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`,
+      [bought.phoneNumber, bought.sid, bought.friendlyName, userId, customerId]
+    );
+
+    console.log(`✅ Bought and assigned ${bought.phoneNumber} to customer ${userId}`);
+
+    // Submit toll-free verification with the customer's business info.
+    // If their profile is missing required fields, this records 'needs_info'
+    // instead of failing — the dashboard prompts them to complete it.
+    let verification = { submitted: false, needsInfo: [] };
+    try {
+      verification = await submitTollfreeVerification({
+        clerkUserId: userId,
+        phoneNumberSid: bought.sid
+      });
+    } catch (err) {
+      console.error('⚠️ TFV submission failed (non-fatal):', err.message);
+    }
 
     // Fire-and-forget: provision Vapi voice assistant for this number
     fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/vapi/provision`, {
@@ -85,7 +126,15 @@ export async function POST(request) {
       headers: { Cookie: request.headers.get('cookie') || '' },
     }).catch(err => console.error('⚠️ Vapi auto-provision failed:', err.message));
 
-    return NextResponse.json({ success: true, phoneNumber: number.phone_number });
+    return NextResponse.json({
+      success: true,
+      phoneNumber: bought.phoneNumber,
+      verificationSubmitted: verification.submitted,
+      verificationNeedsInfo: verification.needsInfo || [],
+      message: verification.submitted
+        ? 'Your number is being activated — texting goes live once verified (usually 1-5 business days).'
+        : 'Number assigned! Complete your business profile to start verification.'
+    });
 
   } catch (error) {
     console.error('❌ SMS provision error:', error);
@@ -93,7 +142,7 @@ export async function POST(request) {
   }
 }
 
-// GET: check if customer already has a number assigned
+// GET: check if customer already has a number assigned + its verification status
 export async function GET() {
   try {
     const { userId } = auth();
@@ -102,17 +151,27 @@ export async function GET() {
     await ensureTable();
 
     const result = await query(
-      `SELECT phone_number, assigned_at FROM customer_phone_numbers
+      `SELECT phone_number, assigned_at, tfv_status, tfv_approved_at FROM customer_phone_numbers
        WHERE clerk_user_id = $1 AND status = 'active' LIMIT 1`,
       [userId]
-    );
+    ).catch(async () => {
+      return query(
+        `SELECT phone_number, assigned_at FROM customer_phone_numbers
+         WHERE clerk_user_id = $1 AND status = 'active' LIMIT 1`,
+        [userId]
+      );
+    });
 
     if (result.rows.length === 0) return NextResponse.json({ assigned: false });
 
+    const row = result.rows[0];
     return NextResponse.json({
       assigned: true,
-      phoneNumber: result.rows[0].phone_number,
-      assignedAt: result.rows[0].assigned_at
+      phoneNumber: row.phone_number,
+      assignedAt: row.assigned_at,
+      verificationStatus: row.tfv_status || null,
+      verified: row.tfv_status === 'TWILIO_APPROVED',
+      verifiedAt: row.tfv_approved_at || null
     });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

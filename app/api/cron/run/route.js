@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
+import { checkPendingTollfreeVerifications } from '@/lib/tollfree-verification.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,10 +94,22 @@ export async function POST(request) {
     console.error('❌ Outlook cron query failed:', err.message);
   }
 
+  // ── Toll-free verification status ────────────────────────────────────────
+  let tfvResults = { checked: 0, approved: 0, rejected: 0 };
+  try {
+    tfvResults = await checkPendingTollfreeVerifications();
+    if (tfvResults.checked > 0) {
+      console.log(`📱 TFV check: ${tfvResults.checked} pending, ${tfvResults.approved} approved, ${tfvResults.rejected} rejected`);
+    }
+  } catch (err) {
+    console.error('❌ TFV cron check failed:', err.message);
+  }
+
   const summary = {
     success: true,
     ranAt: new Date().toISOString(),
     durationMs: Date.now() - startTime,
+    tollfreeVerifications: tfvResults,
     gmail: {
       accounts: gmailResults.length,
       totalProcessed: gmailResults.reduce((n, r) => n + (r.processed || 0), 0),
