@@ -241,7 +241,7 @@ BizzyBot gives businesses an AI agent that:
 - [ ] **4. Outlook email end-to-end test** — or disable for launch if broken
 - [ ] **5. Production cleanup + security pass** — remove/protect debug & test routes (`test-fixes`, `debug-issues`, `amanda`, `test-ai`, `test-db-update`, `inspect-database`, `inspect-messages`, `fix-*`, `cleanup-database-issues`, `setup-database` etc.); verify no unauthenticated admin/debug endpoints
 - [x] **5b. Gate number provisioning behind active subscription/trial** — DONE 2026-07-06: `/api/sms/provision` now checks `hasActiveAccess` (Stripe subscription present OR within 14-day trial from created_at) before buying a number; returns 402 needsSubscription otherwise. NOTE: gate treats presence of stripe_subscription_id as active (doesn't verify canceled status via Stripe — tighten later if needed).
-- [ ] **KNOWN STALE:** `/api/customer/subscription` has old hardcoded prices ($99/$299/$799) and old price IDs — source of truth is `lib/stripe.js` ($29/$69/$199). Update the subscription display route before launch.
+- [x] **Subscription route fixed** — DONE 2026-07-06: `/api/customer/subscription` had old price IDs + $99/$299/$799 + "enterprise" (missing "business"), which broke real checkout (upgrade to Business = "Invalid plan"; Starter/Pro checkout used dead price IDs). Now uses correct current price IDs + $29/$69/$199 + starter/professional/business, guarded against legacy plan values.
 - [ ] **6. Trades-first landing page pass** — lead with missed-call pain ($1,200/missed call, 85% of voicemail callers never call back), trades language, keep multi-industry capability
 - [ ] **7. Launch prep** — pick ~10 founding customers (local trades), BIZZYFOUNDER coupon ready, one case study plan
 

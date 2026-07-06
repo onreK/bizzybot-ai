@@ -21,50 +21,33 @@ async function initializeConnections() {
   return { getDbClient, stripe };
 }
 
-// Your actual Stripe price IDs
+// Current Stripe price IDs — keep in sync with lib/stripe.js (hardcoded here
+// to avoid importing lib/stripe.js, which instantiates Stripe at module load).
 const STRIPE_PRICE_IDS = {
-  starter: 'price_1ResOf02X1Dd2GE6KvOoZQIm',
-  professional: 'price_1ResRt02X1Dd2GE6V0ZNpRv5',
-  enterprise: 'price_1ResT402X1Dd2GE6Y0KIFfqD'
+  starter: 'price_1TcLVq01O3SsJO6lr6j8MbWK',
+  professional: 'price_1TcLVr01O3SsJO6lyOqWsyhT',
+  business: 'price_1TcLVs01O3SsJO6lUmCp5Ojl',
 };
 
+// Plans: all channels on every tier; tiers differ by monthly AI response pool,
+// voice minutes, and seats. (The per-channel numbers below mirror the response
+// pool for backward compatibility; the settings UI reads prices/usage elsewhere.)
 const PLAN_DETAILS = {
   starter: {
     name: 'Starter',
-    price: 99,
-    features: {
-      conversations: 500,
-      emailResponses: 1000,
-      smsMessages: 200,
-      aiAgents: 1,
-      teamMembers: 2,
-      integrations: 3
-    }
+    price: 29,
+    features: { conversations: 300, emailResponses: 300, smsMessages: 300, voiceMinutes: 15, seats: 1 },
   },
   professional: {
     name: 'Professional',
-    price: 299,
-    features: {
-      conversations: 2000,
-      emailResponses: 5000,
-      smsMessages: 1000,
-      aiAgents: 3,
-      teamMembers: 10,
-      integrations: 'All'
-    }
+    price: 69,
+    features: { conversations: 1500, emailResponses: 1500, smsMessages: 1500, voiceMinutes: 100, seats: 2 },
   },
-  enterprise: {
-    name: 'Enterprise',
-    price: 799,
-    features: {
-      conversations: 'Unlimited',
-      emailResponses: 'Unlimited',
-      smsMessages: 5000,
-      aiAgents: 'Unlimited',
-      teamMembers: 'Unlimited',
-      integrations: 'Custom'
-    }
-  }
+  business: {
+    name: 'Business',
+    price: 199,
+    features: { conversations: 5000, emailResponses: 5000, smsMessages: 5000, voiceMinutes: 400, seats: 5 },
+  },
 };
 
 export async function GET() {
@@ -165,8 +148,8 @@ export async function GET() {
           
           if (priceId === STRIPE_PRICE_IDS.professional) {
             planName = 'professional';
-          } else if (priceId === STRIPE_PRICE_IDS.enterprise) {
-            planName = 'enterprise';
+          } else if (priceId === STRIPE_PRICE_IDS.business) {
+            planName = 'business';
           }
           
           // Check if subscription has a discount
@@ -210,20 +193,22 @@ export async function GET() {
         }
       }
       
-      // Return default subscription data
-      return NextResponse.json({ 
+      // Return default subscription data (guard against legacy plan values)
+      const safePlan = PLAN_DETAILS[customer.plan] ? customer.plan : 'starter';
+      const planDetails = PLAN_DETAILS[safePlan];
+      return NextResponse.json({
         success: true,
         subscription: {
-          plan: customer.plan || 'starter',
+          plan: safePlan,
           status: 'trialing',
-          planDetails: PLAN_DETAILS[customer.plan || 'starter'],
+          planDetails,
           usage: {
             conversations: 0,
             emailResponses: 0,
             smsMessages: 0,
-            maxConversations: PLAN_DETAILS[customer.plan || 'starter'].features.conversations,
-            maxEmailResponses: PLAN_DETAILS[customer.plan || 'starter'].features.emailResponses,
-            maxSmsMessages: PLAN_DETAILS[customer.plan || 'starter'].features.smsMessages
+            maxConversations: planDetails.features.conversations,
+            maxEmailResponses: planDetails.features.emailResponses,
+            maxSmsMessages: planDetails.features.smsMessages
           }
         },
         plans: PLAN_DETAILS
