@@ -6,16 +6,21 @@ import crypto from 'crypto';
 
 export async function POST(request) {
   try {
-    // Verify Vapi sent this — reject anything without the shared secret
-    const incomingSecret = request.headers.get('x-vapi-secret');
-    const expectedSecret = process.env.VAPI_WEBHOOK_SECRET;
-    if (!expectedSecret || !incomingSecret ||
-        !crypto.timingSafeEqual(Buffer.from(incomingSecret), Buffer.from(expectedSecret))) {
+    // Verify Vapi sent this — reject anything without the shared secret.
+    // Compare safely so a length mismatch can't throw.
+    const incomingSecret = request.headers.get('x-vapi-secret') || '';
+    const expectedSecret = process.env.VAPI_WEBHOOK_SECRET || '';
+    const a = Buffer.from(incomingSecret);
+    const b = Buffer.from(expectedSecret);
+    if (!expectedSecret || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { type, call } = body;
+    // Vapi nests the event under `message`; support both shapes.
+    const message = body.message || body;
+    const type = message.type;
+    const call = message.call || body.call || {};
 
     if (!call?.id || !call?.assistantId) return NextResponse.json({ received: true });
 
@@ -30,14 +35,17 @@ export async function POST(request) {
     if (!owner) return NextResponse.json({ received: true });
 
     if (type === 'end-of-call-report') {
-      const durationSeconds = call.endedAt && call.startedAt
-        ? Math.round((new Date(call.endedAt) - new Date(call.startedAt)) / 1000)
-        : 0;
+      // Timestamps/transcript/summary live on the message, not the call.
+      const startedAt = message.startedAt || call.startedAt || null;
+      const endedAt = message.endedAt || call.endedAt || null;
+      const durationSeconds = message.durationSeconds
+        ? Math.round(message.durationSeconds)
+        : (startedAt && endedAt ? Math.round((new Date(endedAt) - new Date(startedAt)) / 1000) : 0);
 
-      const callerPhone = call.customer?.number || null;
-      const transcript = call.transcript || null;
-      const summary = call.summary || null;
-      const endedReason = call.endedReason || 'completed';
+      const callerPhone = message.customer?.number || call.customer?.number || null;
+      const transcript = message.transcript || call.transcript || null;
+      const summary = message.summary || call.summary || null;
+      const endedReason = message.endedReason || call.endedReason || 'completed';
 
       // 1. Save call log
       await query(`
@@ -60,8 +68,8 @@ export async function POST(request) {
         endedReason,
         transcript,
         summary,
-        call.startedAt ? new Date(call.startedAt) : null,
-        call.endedAt ? new Date(call.endedAt) : null,
+        startedAt ? new Date(startedAt) : null,
+        endedAt ? new Date(endedAt) : null,
       ]).catch(err => console.error('⚠️ vapi_call_logs insert failed:', err.message));
 
       // 2. Create/update contact + track lead event

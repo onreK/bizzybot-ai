@@ -29,17 +29,17 @@ export async function GET() {
       query(
         `SELECT vapi_call_id, caller_phone, duration_seconds, status, transcript, summary, started_at, ended_at
          FROM vapi_call_logs
-         WHERE customer_id = $1
+         WHERE customer_id = $1 OR clerk_user_id = $2
          ORDER BY started_at DESC NULLS LAST
          LIMIT 100`,
-        [customerId]
+        [customerId, userId]
       ).catch(() => ({ rows: [] })),
 
       query(
         `SELECT COALESCE(SUM(duration_seconds), 0) AS total_seconds
          FROM vapi_call_logs
-         WHERE customer_id = $1 AND started_at >= $2`,
-        [customerId, firstOfMonth.toISOString()]
+         WHERE (customer_id = $1 OR clerk_user_id = $2) AND started_at >= $3`,
+        [customerId, userId, firstOfMonth.toISOString()]
       ).catch(() => ({ rows: [{ total_seconds: 0 }] })),
     ]);
 
