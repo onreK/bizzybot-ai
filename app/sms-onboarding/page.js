@@ -35,6 +35,18 @@ export default function SMSOnboarding() {
       const numberRes = await fetch('/api/sms/provision');
       const numberData = await numberRes.json();
       if (numberData.assigned) {
+        // If the number is still waiting on business info, try submitting
+        // verification now (the profile may have been completed since).
+        if (numberData.verificationStatus === 'needs_info' || !numberData.verificationStatus) {
+          try {
+            const retryRes = await fetch('/api/sms/retry-verification', { method: 'POST' });
+            const retryData = await retryRes.json();
+            if (retryData.success) {
+              numberData.verificationStatus = retryData.verificationStatus;
+              numberData.verified = retryData.verificationStatus === 'TWILIO_APPROVED';
+            }
+          } catch { /* fall through to showing current status */ }
+        }
         setAssigned(numberData);
         setPageState('assigned');
         return;
