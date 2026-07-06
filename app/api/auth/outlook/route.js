@@ -6,7 +6,8 @@ import crypto from 'crypto';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
-const SCOPES = 'Mail.Read Mail.ReadWrite Mail.Send offline_access User.Read email Calendars.ReadWrite';
+// openid is required by Microsoft v2.0 whenever profile/email are requested.
+const SCOPES = 'openid profile email offline_access User.Read Mail.Read Mail.ReadWrite Mail.Send Calendars.ReadWrite';
 
 export async function GET() {
   try {
