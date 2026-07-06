@@ -27,6 +27,34 @@ async function ensureBusinessProfilesTable() {
       UNIQUE(customer_id)
     )
   `);
+
+  // Legacy business_profiles tables on older databases are missing columns.
+  // Add any that don't exist so the upsert below never hits "column does not exist".
+  const columns = [
+    ['industry', 'VARCHAR(100)'],
+    ['website', 'VARCHAR(255)'],
+    ['phone', 'VARCHAR(50)'],
+    ['address', 'VARCHAR(255)'],
+    ['city', 'VARCHAR(100)'],
+    ['state', 'VARCHAR(50)'],
+    ['zip_code', 'VARCHAR(20)'],
+    ['country', 'VARCHAR(100)'],
+    ['timezone', 'VARCHAR(50)'],
+    ['employee_count', 'VARCHAR(20)'],
+    ['description', 'TEXT'],
+    ['created_at', 'TIMESTAMP DEFAULT NOW()'],
+    ['updated_at', 'TIMESTAMP DEFAULT NOW()'],
+  ];
+  for (const [name, type] of columns) {
+    await query(`ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS ${name} ${type}`).catch(() => {});
+  }
+}
+
+// Ensure the customers table has the columns this endpoint writes to.
+async function ensureCustomerColumns() {
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS clerk_user_id VARCHAR(255)`).catch(() => {});
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(() => {});
 }
 
 // Find the customer row for this Clerk user, tolerant of the legacy
@@ -79,6 +107,9 @@ export async function POST(request) {
     } = body;
 
     console.log('🏢 Updating business profile for user:', clerkId);
+
+    // 0. Make sure the tables have every column we're about to write to.
+    await ensureCustomerColumns();
 
     // 1. Find (and heal) or create the customer row.
     const customer = await findOrCreateCustomer(clerkId, email, businessName);

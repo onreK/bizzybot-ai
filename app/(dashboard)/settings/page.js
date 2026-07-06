@@ -308,10 +308,11 @@ export default function SettingsPage() {
         })
       });
 
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         setMessage({ type: 'success', text: 'Business profile updated successfully!' });
       } else {
-        setMessage({ type: 'error', text: 'Failed to update business profile' });
+        setMessage({ type: 'error', text: data.details ? `Failed to update: ${data.details}` : 'Failed to update business profile' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'An error occurred while saving' });
