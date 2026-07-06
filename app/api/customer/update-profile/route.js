@@ -155,12 +155,14 @@ export async function POST(request) {
         profileValues
       );
     } else {
+      // Legacy business_profiles has a NOT-NULL user_id column with no default,
+      // so set it explicitly (to this Clerk id) alongside customer_id.
       await query(
         `INSERT INTO business_profiles
-           (customer_id, industry, website, phone, address, city, state,
+           (customer_id, user_id, industry, website, phone, address, city, state,
             zip_code, country, timezone, employee_count, description, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
-        profileValues
+         VALUES ($1, $13, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+        [...profileValues, clerkId]
       );
     }
 
