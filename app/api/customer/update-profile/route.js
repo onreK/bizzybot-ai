@@ -61,22 +61,21 @@ async function ensureCustomerColumns() {
 // user_id / clerk_user_id split. Heals both columns so every other
 // endpoint (which keys on clerk_user_id) can find this row afterward.
 async function findOrCreateCustomer(clerkId, email, fallbackBusinessName) {
+  // Cast both id columns to text — on legacy databases they can be
+  // different types, which otherwise triggers "inconsistent types for $1".
   const found = await query(
-    `SELECT * FROM customers WHERE clerk_user_id = $1 OR user_id = $1 ORDER BY id ASC LIMIT 1`,
+    `SELECT * FROM customers WHERE clerk_user_id::text = $1 OR user_id::text = $1 ORDER BY id ASC LIMIT 1`,
     [clerkId]
   );
 
   if (found.rows.length > 0) {
     const customer = found.rows[0];
-    // Heal: make sure both id columns point at this Clerk id.
+    // Heal: make sure clerk_user_id points at this Clerk id so every other
+    // endpoint (which keys on clerk_user_id) finds this row afterward.
     await query(
-      `UPDATE customers
-       SET clerk_user_id = $1,
-           user_id = COALESCE(NULLIF(user_id, ''), $1),
-           updated_at = NOW()
-       WHERE id = $2`,
+      `UPDATE customers SET clerk_user_id = $1, updated_at = NOW() WHERE id = $2`,
       [clerkId, customer.id]
-    );
+    ).catch(() => {});
     return customer;
   }
 
@@ -224,7 +223,7 @@ export async function GET() {
               bp.employee_count, bp.description
        FROM customers c
        LEFT JOIN business_profiles bp ON bp.customer_id = c.id
-       WHERE c.clerk_user_id = $1 OR c.user_id = $1
+       WHERE c.clerk_user_id::text = $1 OR c.user_id::text = $1
        ORDER BY c.id ASC
        LIMIT 1`,
       [user.id]
