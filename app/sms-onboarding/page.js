@@ -28,6 +28,8 @@ export default function SMSOnboarding() {
   // Verification-specific compliance info (kept separate from business profile)
   const [businessType, setBusinessType] = useState('');
   const [ein, setEin] = useState('');
+  const [contactFirstName, setContactFirstName] = useState('');
+  const [contactLastName, setContactLastName] = useState('');
 
   // True when a number already exists but still needs info — the form then
   // re-submits verification instead of buying another number.
@@ -95,6 +97,8 @@ export default function SMSOnboarding() {
         if (infoData.success) {
           setBusinessType(infoData.businessType || '');
           setEin(infoData.ein || '');
+          setContactFirstName(infoData.contactFirstName || '');
+          setContactLastName(infoData.contactLastName || '');
         }
       } catch { /* ignore */ }
 
@@ -114,6 +118,7 @@ export default function SMSOnboarding() {
     if (!profile.zipCode.trim()) return 'ZIP code is required';
     if (!businessType) return 'Please select your business type';
     if (businessType !== 'SOLE_PROPRIETOR' && !ein.trim()) return 'EIN is required for your business type';
+    if (!contactFirstName.trim() || !contactLastName.trim()) return 'Authorized contact first and last name are required';
     return '';
   };
 
@@ -151,7 +156,12 @@ export default function SMSOnboarding() {
       const infoRes = await fetch('/api/sms/verification-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessType, ein: ein.trim() }),
+        body: JSON.stringify({
+          businessType,
+          ein: ein.trim(),
+          contactFirstName: contactFirstName.trim(),
+          contactLastName: contactLastName.trim(),
+        }),
       });
       const infoData = await infoRes.json();
       if (!infoData.success) throw new Error(infoData.error || 'Failed to save business type');
@@ -450,6 +460,38 @@ export default function SMSOnboarding() {
                 <p className="text-xs text-gray-400 mt-1">Your 9-digit federal Employer Identification Number.</p>
               </div>
             )}
+
+            <div className="pt-2 border-t border-gray-100">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Authorized contact name *</label>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  value={contactFirstName}
+                  onChange={(e) => setContactFirstName(e.target.value)}
+                  placeholder="First name"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                />
+                <input
+                  type="text"
+                  value={contactLastName}
+                  onChange={(e) => setContactLastName(e.target.value)}
+                  placeholder="Last name"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                The real person authorizing this on behalf of the business — not a nickname or username.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">
+                This information is submitted to phone carriers as a legal business verification.
+                It must be <strong>100% accurate and match your official business records</strong> (legal
+                business name, EIN, and authorized contact). Inaccurate details will cause your number to be rejected.
+              </p>
+            </div>
           </div>
 
           {error && (
