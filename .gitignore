@@ -1,0 +1,18 @@
+# Dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# Environment files — secrets live in Railway, never in git
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs & misc
+npm-debug.log*
+.DS_Store
+*.pem

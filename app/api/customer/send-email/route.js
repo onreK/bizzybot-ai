@@ -8,7 +8,7 @@ import {
   createEmailMessage 
 } from '../../../../lib/database';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export async function POST(request) {
   try {
@@ -62,6 +62,9 @@ export async function POST(request) {
     `;
 
     // Send email via Resend
+    if (!resend) {
+      return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
+    }
     const emailResult = await resend.emails.send({
       from: conversation.business_email || `noreply@${customer.business_name.toLowerCase().replace(/\s+/g, '')}.com`,
       to: conversation.customer_email,

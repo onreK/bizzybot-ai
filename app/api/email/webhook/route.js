@@ -13,7 +13,7 @@ import {
 // Import centralized AI service
 import { generateAIResponse } from '../../../../lib/ai-service.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Hot lead detection keywords (for backward compatibility)
 const HOT_LEAD_KEYWORDS = [
@@ -280,6 +280,7 @@ function convertTextToHtml(aiText, customer) {
 // Send email response using Resend
 async function sendEmailResponse(emailData) {
   try {
+    if (!resend) throw new Error('Email service not configured (RESEND_API_KEY missing)');
     const result = await resend.emails.send({
       from: emailData.from,
       to: emailData.to,
@@ -333,6 +334,7 @@ async function sendBusinessOwnerEmailAlert(customer, fromEmail, subject, keyword
       </div>
     `;
 
+    if (!resend) throw new Error('Email service not configured (RESEND_API_KEY missing)');
     await resend.emails.send({
       from: 'alerts@bizzybot.ai',
       to: customer.email,

@@ -226,6 +226,31 @@ BizzyBot gives businesses an AI agent that:
 
 ---
 
+## 🚀 Launch Plan (added 2026-07-06)
+
+**Positioning decision:** Market trades/home-services-first ("never miss a call again"), multi-industry under the hood. Launch channels: **SMS AI + Voice AI + Web Chat + Outlook email**. Facebook/Instagram/Gmail = "coming soon" (pending external approvals — not launch blockers).
+
+**Market context:** Gap between reputation giants (Podium $399+, Birdeye $299+, GHL $97+$97 AI add-on) and voice-only bots (Rosie $49, Goodcall $79, Jobber AI $99). BizzyBot = multi-channel AI at solo-shop prices ($29/$69/$199). Window is ~12-18 months before voice bots add channels. Unit economics: ~70% gross margin on Pro tier.
+
+### Launch Checklist (critical path — in order)
+
+- [ ] **1. SMS onboarding page rework** — replace fake demo flow with real `/api/sms/provision` call + collect business address (required for toll-free verification); show verification-pending state
+- [ ] **2. End-to-end SMS test with a real number** — signup → toll-free purchase → TFV submission → approval (3-5 biz days) → text the number → AI replies → lead logged. TFV pipeline has never run live
+- [ ] **3. Vapi voice end-to-end test** — same number: call it, AI answers, transcript + minutes logged (test list in "Built but Untested" section)
+- [ ] **4. Outlook email end-to-end test** — or disable for launch if broken
+- [ ] **5. Production cleanup + security pass** — remove/protect debug & test routes (`test-fixes`, `debug-issues`, `amanda`, `test-ai`, `test-db-update`, `inspect-database`, `inspect-messages`, `fix-*`, `cleanup-database-issues`, `setup-database` etc.); verify no unauthenticated admin/debug endpoints
+- [ ] **6. Trades-first landing page pass** — lead with missed-call pain ($1,200/missed call, 85% of voicemail callers never call back), trades language, keep multi-industry capability
+- [ ] **7. Launch prep** — pick ~10 founding customers (local trades), BIZZYFOUNDER coupon ready, one case study plan
+
+### External (parallel, not blocking)
+- [ ] Request Twilio Hosted Numbers API preview access (Console ticket or hostedsms@twilio.com + Account SID) — needed for "keep your existing number" v1.1 feature
+- [ ] Meta App Review (in progress) · Google OAuth verification (in progress)
+
+### Post-launch backlog
+Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships)
+
+---
+
 ## Session Log
 
 ### Session — 2026-07-05
