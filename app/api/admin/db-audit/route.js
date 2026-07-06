@@ -78,3 +78,43 @@ export async function GET() {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+// POST: one-time heal — make user_id consistent with clerk_user_id on any
+// rows where they diverged (legacy rows left user_id at its 'default_user'
+// default). Admin only. Safe + idempotent.
+export async function POST() {
+  try {
+    const { userId } = auth();
+    if (!(await isAdmin(userId))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const before = (await query(
+      `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched
+       FROM customers`
+    ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
+
+    const result = await query(
+      `UPDATE customers
+       SET user_id = clerk_user_id, updated_at = NOW()
+       WHERE clerk_user_id IS NOT NULL
+         AND clerk_user_id::text <> ''
+         AND clerk_user_id::text <> user_id::text`
+    );
+
+    const after = (await query(
+      `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched
+       FROM customers`
+    ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
+
+    return NextResponse.json({
+      success: true,
+      healed: result.rowCount ?? 0,
+      mismatchedBefore: before.mismatched,
+      mismatchedAfter: after.mismatched,
+      ranAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
