@@ -3,296 +3,223 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs';
 import { query } from '@/lib/database';
 
-// Force dynamic rendering since we use authentication
 export const dynamic = 'force-dynamic';
+
+// Ensure the business_profiles table exists with the expected shape.
+async function ensureBusinessProfilesTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS business_profiles (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+      industry VARCHAR(100),
+      website VARCHAR(255),
+      phone VARCHAR(50),
+      address VARCHAR(255),
+      city VARCHAR(100),
+      state VARCHAR(50),
+      zip_code VARCHAR(20),
+      country VARCHAR(100),
+      timezone VARCHAR(50),
+      employee_count VARCHAR(20),
+      description TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(customer_id)
+    )
+  `);
+}
+
+// Find the customer row for this Clerk user, tolerant of the legacy
+// user_id / clerk_user_id split. Heals both columns so every other
+// endpoint (which keys on clerk_user_id) can find this row afterward.
+async function findOrCreateCustomer(clerkId, email, fallbackBusinessName) {
+  const found = await query(
+    `SELECT * FROM customers WHERE clerk_user_id = $1 OR user_id = $1 ORDER BY id ASC LIMIT 1`,
+    [clerkId]
+  );
+
+  if (found.rows.length > 0) {
+    const customer = found.rows[0];
+    // Heal: make sure both id columns point at this Clerk id.
+    await query(
+      `UPDATE customers
+       SET clerk_user_id = $1,
+           user_id = COALESCE(NULLIF(user_id, ''), $1),
+           updated_at = NOW()
+       WHERE id = $2`,
+      [clerkId, customer.id]
+    );
+    return customer;
+  }
+
+  // No row yet — create one, setting BOTH id columns (user_id is NOT NULL).
+  const created = await query(
+    `INSERT INTO customers (clerk_user_id, user_id, email, business_name, plan, created_at, updated_at)
+     VALUES ($1, $1, $2, $3, 'starter', NOW(), NOW())
+     RETURNING *`,
+    [clerkId, email || '', (fallbackBusinessName || 'My Business')]
+  );
+  return created.rows[0];
+}
 
 export async function POST(request) {
   try {
-    // Get the current user from Clerk
     const user = await currentUser();
-    
     if (!user) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Unauthorized - Please sign in' 
-      }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized - Please sign in' }, { status: 401 });
     }
 
-    // Parse the request body
+    const clerkId = user.id;
+    const email = user.emailAddresses?.[0]?.emailAddress || '';
     const body = await request.json();
     const {
-      businessName,
-      industry,
-      website,
-      phone,
-      address,
-      city,
-      state,
-      zipCode,
-      country,
-      timezone,
-      employeeCount,
-      description
+      businessName, industry, website, phone,
+      address, city, state, zipCode, country,
+      timezone, employeeCount, description,
     } = body;
 
-    console.log('🏢 Updating business profile for user:', user.id);
+    console.log('🏢 Updating business profile for user:', clerkId);
 
-    // First, check if customer exists
-    const checkCustomerQuery = `
-      SELECT id, clerk_user_id, business_name 
-      FROM customers 
-      WHERE clerk_user_id = $1
-      LIMIT 1
-    `;
-    
-    const customerResult = await query(checkCustomerQuery, [user.id]);
-    
-    if (customerResult.rows.length === 0) {
-      // Create customer if doesn't exist
-      const createCustomerQuery = `
-        INSERT INTO customers (
-          clerk_user_id, 
-          email, 
-          business_name, 
-          plan,
-          created_at,
-          updated_at
-        ) 
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
-        RETURNING id
-      `;
-      
-      const createResult = await query(createCustomerQuery, [
-        user.id,
-        user.emailAddresses?.[0]?.emailAddress || '',
-        businessName || 'My Business',
-        'starter'
-      ]);
-      
-      console.log('✅ Created new customer record');
+    // 1. Find (and heal) or create the customer row.
+    const customer = await findOrCreateCustomer(clerkId, email, businessName);
+
+    // 2. Update business_name on the customer record (only when provided).
+    if (businessName && businessName.trim()) {
+      await query(
+        `UPDATE customers SET business_name = $1, updated_at = NOW() WHERE id = $2`,
+        [businessName.trim(), customer.id]
+      );
     }
 
-    // Update the business profile in the customers table
-    const updateCustomerQuery = `
-      UPDATE customers 
-      SET 
-        business_name = COALESCE($1, business_name),
-        updated_at = NOW()
-      WHERE clerk_user_id = $2
-      RETURNING *
-    `;
-    
-    const updateResult = await query(updateCustomerQuery, [
-      businessName,
-      user.id
-    ]);
+    // 3. Upsert business_profiles — manual update-or-insert so we never
+    //    depend on an ON CONFLICT target that legacy tables may lack.
+    await ensureBusinessProfilesTable();
 
-    const customer = updateResult.rows[0];
+    const existingProfile = await query(
+      `SELECT id FROM business_profiles WHERE customer_id = $1 LIMIT 1`,
+      [customer.id]
+    );
 
-    // Check if business_profiles table exists and create/update profile
-    try {
-      // First check if the table exists
-      const checkTableQuery = `
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'business_profiles'
-        )
-      `;
-      
-      const tableExists = await query(checkTableQuery);
-      
-      if (!tableExists.rows[0].exists) {
-        // Create the business_profiles table if it doesn't exist
-        const createTableQuery = `
-          CREATE TABLE IF NOT EXISTS business_profiles (
-            id SERIAL PRIMARY KEY,
-            customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-            industry VARCHAR(100),
-            website VARCHAR(255),
-            phone VARCHAR(50),
-            address VARCHAR(255),
-            city VARCHAR(100),
-            state VARCHAR(50),
-            zip_code VARCHAR(20),
-            country VARCHAR(100),
-            timezone VARCHAR(50),
-            employee_count VARCHAR(20),
-            description TEXT,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW(),
-            UNIQUE(customer_id)
-          )
-        `;
-        
-        await query(createTableQuery);
-        console.log('✅ Created business_profiles table');
-      }
+    const profileValues = [
+      customer.id,
+      industry || null,
+      website || null,
+      phone || null,
+      address || null,
+      city || null,
+      state || null,
+      zipCode || null,
+      country || 'United States',
+      timezone || 'America/New_York',
+      employeeCount || null,
+      description || null,
+    ];
 
-      // Insert or update the business profile
-      const upsertProfileQuery = `
-        INSERT INTO business_profiles (
-          customer_id,
-          industry,
-          website,
-          phone,
-          address,
-          city,
-          state,
-          zip_code,
-          country,
-          timezone,
-          employee_count,
-          description,
-          updated_at
-        ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
-        ON CONFLICT (customer_id) 
-        DO UPDATE SET
-          industry = EXCLUDED.industry,
-          website = EXCLUDED.website,
-          phone = EXCLUDED.phone,
-          address = EXCLUDED.address,
-          city = EXCLUDED.city,
-          state = EXCLUDED.state,
-          zip_code = EXCLUDED.zip_code,
-          country = EXCLUDED.country,
-          timezone = EXCLUDED.timezone,
-          employee_count = EXCLUDED.employee_count,
-          description = EXCLUDED.description,
-          updated_at = NOW()
-        RETURNING *
-      `;
-      
-      const profileResult = await query(upsertProfileQuery, [
-        customer.id,
-        industry || null,
-        website || null,
-        phone || null,
-        address || null,
-        city || null,
-        state || null,
-        zipCode || null,
-        country || 'United States',
-        timezone || 'America/New_York',
-        employeeCount || null,
-        description || null
-      ]);
-
-      console.log('✅ Business profile updated successfully');
-
-      return NextResponse.json({
-        success: true,
-        message: 'Business profile updated successfully',
-        customer: {
-          ...customer,
-          profile: profileResult.rows[0]
-        }
-      });
-
-    } catch (profileError) {
-      console.error('⚠️ Error with business_profiles table:', profileError);
-      
-      // Even if profile table operations fail, we still updated the customer
-      return NextResponse.json({
-        success: true,
-        message: 'Business name updated successfully',
-        customer: customer
-      });
+    if (existingProfile.rows.length > 0) {
+      await query(
+        `UPDATE business_profiles SET
+           industry = $2, website = $3, phone = $4, address = $5, city = $6,
+           state = $7, zip_code = $8, country = $9, timezone = $10,
+           employee_count = $11, description = $12, updated_at = NOW()
+         WHERE customer_id = $1`,
+        profileValues
+      );
+    } else {
+      await query(
+        `INSERT INTO business_profiles
+           (customer_id, industry, website, phone, address, city, state,
+            zip_code, country, timezone, employee_count, description, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+        profileValues
+      );
     }
 
+    // 4. Read back the saved state and return it — proves the write landed.
+    const readback = await query(
+      `SELECT c.business_name,
+              bp.industry, bp.website, bp.phone, bp.address, bp.city,
+              bp.state, bp.zip_code, bp.country, bp.timezone,
+              bp.employee_count, bp.description
+       FROM customers c
+       LEFT JOIN business_profiles bp ON bp.customer_id = c.id
+       WHERE c.id = $1`,
+      [customer.id]
+    );
+    const saved = readback.rows[0] || {};
+
+    console.log('✅ Business profile saved for customer', customer.id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Business profile updated successfully',
+      profile: {
+        businessName: saved.business_name || '',
+        industry: saved.industry || '',
+        website: saved.website || '',
+        phone: saved.phone || '',
+        address: saved.address || '',
+        city: saved.city || '',
+        state: saved.state || '',
+        zipCode: saved.zip_code || '',
+        country: saved.country || 'United States',
+        timezone: saved.timezone || 'America/New_York',
+        employeeCount: saved.employee_count || '',
+        description: saved.description || '',
+      },
+    });
   } catch (error) {
+    // No more silent success — surface the real reason.
     console.error('❌ Error updating business profile:', error);
-    
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: 'Failed to update business profile',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: error.message,
     }, { status: 500 });
   }
 }
 
-// GET method to retrieve current business profile
+// GET — read the current business profile, tolerant of the legacy id split.
 export async function GET() {
   try {
     const user = await currentUser();
-    
     if (!user) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get customer and profile from database
-    const customerQuery = `
-      SELECT 
-        c.*,
-        bp.industry,
-        bp.website,
-        bp.phone,
-        bp.address,
-        bp.city,
-        bp.state,
-        bp.zip_code,
-        bp.country,
-        bp.timezone,
-        bp.employee_count,
-        bp.description
-      FROM customers c
-      LEFT JOIN business_profiles bp ON c.id = bp.customer_id
-      WHERE c.clerk_user_id = $1
-      LIMIT 1
-    `;
-    
-    const result = await query(customerQuery, [user.id]);
-    
-    if (result.rows.length === 0) {
-      return NextResponse.json({
-        success: true,
-        profile: {
-          businessName: '',
-          industry: '',
-          website: '',
-          phone: '',
-          address: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          country: 'United States',
-          timezone: 'America/New_York',
-          employeeCount: '',
-          description: ''
-        }
-      });
-    }
+    const result = await query(
+      `SELECT c.business_name,
+              bp.industry, bp.website, bp.phone, bp.address, bp.city,
+              bp.state, bp.zip_code, bp.country, bp.timezone,
+              bp.employee_count, bp.description
+       FROM customers c
+       LEFT JOIN business_profiles bp ON bp.customer_id = c.id
+       WHERE c.clerk_user_id = $1 OR c.user_id = $1
+       ORDER BY c.id ASC
+       LIMIT 1`,
+      [user.id]
+    );
 
-    const customer = result.rows[0];
+    const row = result.rows[0] || {};
 
     return NextResponse.json({
       success: true,
       profile: {
-        businessName: customer.business_name || '',
-        industry: customer.industry || '',
-        website: customer.website || '',
-        phone: customer.phone || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        zipCode: customer.zip_code || '',
-        country: customer.country || 'United States',
-        timezone: customer.timezone || 'America/New_York',
-        employeeCount: customer.employee_count || '',
-        description: customer.description || ''
-      }
+        businessName: row.business_name || '',
+        industry: row.industry || '',
+        website: row.website || '',
+        phone: row.phone || '',
+        address: row.address || '',
+        city: row.city || '',
+        state: row.state || '',
+        zipCode: row.zip_code || '',
+        country: row.country || 'United States',
+        timezone: row.timezone || 'America/New_York',
+        employeeCount: row.employee_count || '',
+        description: row.description || '',
+      },
     });
-
   } catch (error) {
     console.error('❌ Error getting business profile:', error);
-    
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to get business profile'
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to get business profile' }, { status: 500 });
   }
 }

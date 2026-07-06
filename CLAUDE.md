@@ -239,6 +239,7 @@ BizzyBot gives businesses an AI agent that:
 - [ ] **3. Vapi voice end-to-end test** — same number: call it, AI answers, transcript + minutes logged (test list in "Built but Untested" section)
 - [ ] **4. Outlook email end-to-end test** — or disable for launch if broken
 - [ ] **5. Production cleanup + security pass** — remove/protect debug & test routes (`test-fixes`, `debug-issues`, `amanda`, `test-ai`, `test-db-update`, `inspect-database`, `inspect-messages`, `fix-*`, `cleanup-database-issues`, `setup-database` etc.); verify no unauthenticated admin/debug endpoints
+- [ ] **5b. Gate number provisioning behind active subscription/trial** — `/api/sms/provision` currently only checks auth (userId), NOT subscription status. A non-paying user could trigger a real ~$2/mo toll-free purchase on BizzyBot's Twilio account. Add active-trial-or-paid check before buying a number. (Twilio number cost is always billed to BizzyBot's Twilio account, not the customer's Stripe card — this gate protects against freeloaders.)
 - [ ] **6. Trades-first landing page pass** — lead with missed-call pain ($1,200/missed call, 85% of voicemail callers never call back), trades language, keep multi-industry capability
 - [ ] **7. Launch prep** — pick ~10 founding customers (local trades), BIZZYFOUNDER coupon ready, one case study plan
 
