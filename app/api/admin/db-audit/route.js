@@ -16,13 +16,40 @@ async function isAdmin(userId) {
   }
 }
 
-// GET: read-only health audit of the customers table and key data integrity.
-// Admin only. Surfaces the dual-ID / duplicate-row issues behind recent bugs.
-export async function GET() {
+// One-time heal: align user_id with clerk_user_id on legacy rows.
+async function healUserIds() {
+  const before = (await query(
+    `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched FROM customers`
+  ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
+
+  const result = await query(
+    `UPDATE customers
+     SET user_id = clerk_user_id, updated_at = NOW()
+     WHERE clerk_user_id IS NOT NULL
+       AND clerk_user_id::text <> ''
+       AND clerk_user_id::text <> user_id::text`
+  );
+
+  const after = (await query(
+    `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched FROM customers`
+  ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
+
+  return { healed: result.rowCount ?? 0, mismatchedBefore: before.mismatched, mismatchedAfter: after.mismatched };
+}
+
+// GET: read-only health audit. Pass ?action=heal to run the one-time user_id
+// heal (admin only, safe, idempotent). Surfaces dual-ID / duplicate-row issues.
+export async function GET(request) {
   try {
     const { userId } = auth();
     if (!(await isAdmin(userId))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const action = new URL(request.url).searchParams.get('action');
+    if (action === 'heal') {
+      const heal = await healUserIds();
+      return NextResponse.json({ success: true, heal, ranAt: new Date().toISOString() });
     }
 
     const out = {};
@@ -79,41 +106,15 @@ export async function GET() {
   }
 }
 
-// POST: one-time heal — make user_id consistent with clerk_user_id on any
-// rows where they diverged (legacy rows left user_id at its 'default_user'
-// default). Admin only. Safe + idempotent.
+// POST: same one-time heal, for programmatic use. Admin only.
 export async function POST() {
   try {
     const { userId } = auth();
     if (!(await isAdmin(userId))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const before = (await query(
-      `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched
-       FROM customers`
-    ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
-
-    const result = await query(
-      `UPDATE customers
-       SET user_id = clerk_user_id, updated_at = NOW()
-       WHERE clerk_user_id IS NOT NULL
-         AND clerk_user_id::text <> ''
-         AND clerk_user_id::text <> user_id::text`
-    );
-
-    const after = (await query(
-      `SELECT COUNT(*) FILTER (WHERE clerk_user_id::text <> user_id::text) AS mismatched
-       FROM customers`
-    ).catch(() => ({ rows: [{ mismatched: 'error' }] }))).rows[0];
-
-    return NextResponse.json({
-      success: true,
-      healed: result.rowCount ?? 0,
-      mismatchedBefore: before.mismatched,
-      mismatchedAfter: after.mismatched,
-      ranAt: new Date().toISOString(),
-    });
+    const heal = await healUserIds();
+    return NextResponse.json({ success: true, heal, ranAt: new Date().toISOString() });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
