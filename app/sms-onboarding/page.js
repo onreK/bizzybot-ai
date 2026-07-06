@@ -44,6 +44,9 @@ export default function SMSOnboarding() {
             if (retryData.success) {
               numberData.verificationStatus = retryData.verificationStatus;
               numberData.verified = retryData.verificationStatus === 'TWILIO_APPROVED';
+              numberData.needsInfoFields = retryData.verificationNeedsInfo || [];
+            } else if (retryData.error) {
+              numberData.retryError = retryData.error;
             }
           } catch { /* fall through to showing current status */ }
         }
@@ -218,6 +221,12 @@ export default function SMSOnboarding() {
                       We need your complete business info (website and address) to activate texting.
                       Please update your <a href="/settings" className="underline font-medium">Business Profile</a> — activation starts automatically once it&apos;s complete.
                     </p>
+                    {assigned.needsInfoFields && assigned.needsInfoFields.length > 0 && (
+                      <p className="text-xs text-amber-600 mt-2">Missing: {assigned.needsInfoFields.join(', ')}</p>
+                    )}
+                    {assigned.retryError && (
+                      <p className="text-xs text-red-600 mt-2">Error: {assigned.retryError}</p>
+                    )}
                   </div>
                 </div>
               </div>
