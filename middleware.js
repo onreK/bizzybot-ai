@@ -6,20 +6,17 @@ export default authMiddleware({
   // Routes that can be accessed while signed out
   publicRoutes: [
     "/",
-    "/amanda(.*)",
     "/demo(.*)",
     "/sign-in(.*)",
     "/sign-up(.*)",
     "/api/webhooks/clerk",
     "/api/contact",
-    "/api/smtp/test",
     "/api/sms/webhook",
     "/api/facebook/webhook",
     "/api/instagram/webhook",        // Instagram webhook (public)
     "/api/email/webhook",
     "/api/widget/(.*)",
     "/api/leads",
-    "/api/setup-database",
     "/api/hot-lead-detection",
     "/onboarding",
     "/pricing",

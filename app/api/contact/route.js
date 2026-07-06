@@ -77,7 +77,7 @@ export async function POST(request) {
           
           <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 25px 0;">
             <h3 style="color: #059669; margin-top: 0;">💡 While You Wait...</h3>
-            <p style="margin: 8px 0;">Check out our live demo: <a href="https://new-real-estate-agent-production.up.railway.app/amanda" style="color: #1e40af;">Amanda's Real Estate Site</a></p>
+            <p style="margin: 8px 0;">Check out our live demo: <a href="https://bizzybotai.com/demo" style="color: #1e40af;">See BizzyBot in action</a></p>
             <p style="margin: 8px 0;">See how AI automation can work for businesses like yours!</p>
           </div>
           
