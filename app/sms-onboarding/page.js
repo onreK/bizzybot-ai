@@ -25,6 +25,14 @@ export default function SMSOnboarding() {
     zipCode: '',
   });
 
+  // Verification-specific compliance info (kept separate from business profile)
+  const [businessType, setBusinessType] = useState('');
+  const [ein, setEin] = useState('');
+
+  // True when a number already exists but still needs info — the form then
+  // re-submits verification instead of buying another number.
+  const [completingExisting, setCompletingExisting] = useState(false);
+
   useEffect(() => {
     loadInitialState();
   }, []);
@@ -34,9 +42,10 @@ export default function SMSOnboarding() {
       // Already has a number? Show status instead of the form.
       const numberRes = await fetch('/api/sms/provision');
       const numberData = await numberRes.json();
+      let stillNeedsInfo = false;
       if (numberData.assigned) {
-        // If the number is still waiting on business info, try submitting
-        // verification now (the profile may have been completed since).
+        // If the number is still waiting on info, try submitting now
+        // (profile/verification info may have been completed since).
         if (numberData.verificationStatus === 'needs_info' || !numberData.verificationStatus) {
           try {
             const retryRes = await fetch('/api/sms/retry-verification', { method: 'POST' });
@@ -48,11 +57,19 @@ export default function SMSOnboarding() {
             } else if (retryData.error) {
               numberData.retryError = retryData.error;
             }
-          } catch { /* fall through to showing current status */ }
+          } catch { /* fall through */ }
+          stillNeedsInfo = numberData.verificationStatus === 'needs_info' || !numberData.verificationStatus;
         }
+
+        // Submitted or approved → show the status screen and stop.
+        if (!stillNeedsInfo) {
+          setAssigned(numberData);
+          setPageState('assigned');
+          return;
+        }
+        // Still needs info → fall through to the form so they can complete it.
+        setCompletingExisting(true);
         setAssigned(numberData);
-        setPageState('assigned');
-        return;
       }
 
       // Prefill business info from their profile
@@ -70,6 +87,17 @@ export default function SMSOnboarding() {
           zipCode: p.zipCode || '',
         });
       }
+
+      // Prefill verification info if previously entered
+      try {
+        const infoRes = await fetch('/api/sms/verification-info');
+        const infoData = await infoRes.json();
+        if (infoData.success) {
+          setBusinessType(infoData.businessType || '');
+          setEin(infoData.ein || '');
+        }
+      } catch { /* ignore */ }
+
       setPageState('form');
     } catch (err) {
       console.error('Failed to load SMS onboarding state:', err);
@@ -84,6 +112,8 @@ export default function SMSOnboarding() {
     if (!profile.city.trim()) return 'City is required';
     if (!profile.state.trim()) return 'State is required';
     if (!profile.zipCode.trim()) return 'ZIP code is required';
+    if (!businessType) return 'Please select your business type';
+    if (businessType !== 'SOLE_PROPRIETOR' && !ein.trim()) return 'EIN is required for your business type';
     return '';
   };
 
@@ -117,15 +147,38 @@ export default function SMSOnboarding() {
       const saveData = await saveRes.json();
       if (!saveData.success) throw new Error(saveData.error || 'Failed to save business info');
 
-      // 2. Buy the number + auto-submit verification
-      const provisionRes = await fetch('/api/sms/provision', { method: 'POST' });
-      const provisionData = await provisionRes.json();
-      if (!provisionData.success) throw new Error(provisionData.error || 'Failed to get your number');
+      // 1b. Save verification-specific compliance info (business type + EIN)
+      const infoRes = await fetch('/api/sms/verification-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessType, ein: ein.trim() }),
+      });
+      const infoData = await infoRes.json();
+      if (!infoData.success) throw new Error(infoData.error || 'Failed to save business type');
+
+      // 2. Either re-submit verification for an existing number, or buy a new one.
+      let phoneNumber, submitted, needsInfoFields;
+      if (completingExisting) {
+        const retryRes = await fetch('/api/sms/retry-verification', { method: 'POST' });
+        const retryData = await retryRes.json();
+        if (!retryData.success) throw new Error(retryData.error || 'Failed to submit verification');
+        phoneNumber = assigned?.phoneNumber;
+        submitted = retryData.verificationSubmitted || retryData.alreadySubmitted;
+        needsInfoFields = retryData.verificationNeedsInfo || [];
+      } else {
+        const provisionRes = await fetch('/api/sms/provision', { method: 'POST' });
+        const provisionData = await provisionRes.json();
+        if (!provisionData.success) throw new Error(provisionData.error || 'Failed to get your number');
+        phoneNumber = provisionData.phoneNumber;
+        submitted = provisionData.verificationSubmitted;
+        needsInfoFields = provisionData.verificationNeedsInfo || [];
+      }
 
       setAssigned({
         assigned: true,
-        phoneNumber: provisionData.phoneNumber,
-        verificationStatus: provisionData.verificationSubmitted ? 'PENDING_REVIEW' : 'needs_info',
+        phoneNumber: phoneNumber,
+        needsInfoFields: needsInfoFields,
+        verificationStatus: submitted ? 'PENDING_REVIEW' : 'needs_info',
         verified: false,
         justProvisioned: true,
       });
@@ -263,9 +316,13 @@ export default function SMSOnboarding() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
       <div className="max-w-2xl mx-auto px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Get your AI business number</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {completingExisting ? 'Complete your SMS activation' : 'Get your AI business number'}
+          </h1>
           <p className="text-gray-600">
-            One number for AI texting and voice — set up in under a minute.
+            {completingExisting
+              ? `Finish verifying ${formatPhoneNumber(assigned?.phoneNumber) || 'your number'} so texting can go live.`
+              : 'One number for AI texting and voice — set up in under a minute.'}
           </p>
         </div>
 
@@ -361,6 +418,38 @@ export default function SMSOnboarding() {
                 />
               </div>
             </div>
+
+            <div className="pt-2 border-t border-gray-100">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business type *</label>
+              <select
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+              >
+                <option value="">Select…</option>
+                <option value="SOLE_PROPRIETOR">Sole Proprietor / Individual (no EIN)</option>
+                <option value="PRIVATE_PROFIT">LLC or Corporation (for-profit)</option>
+                <option value="NON_PROFIT">Non-profit</option>
+                <option value="GOVERNMENT">Government</option>
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Carriers require this to verify who&apos;s sending texts. Solo operators without a tax ID choose &quot;Sole Proprietor.&quot;
+              </p>
+            </div>
+
+            {businessType && businessType !== 'SOLE_PROPRIETOR' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">EIN (Federal Tax ID) *</label>
+                <input
+                  type="text"
+                  value={ein}
+                  onChange={(e) => setEin(e.target.value)}
+                  placeholder="12-3456789"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">Your 9-digit federal Employer Identification Number.</p>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -376,7 +465,7 @@ export default function SMSOnboarding() {
             className="w-full mt-6 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
-            {saving ? 'Setting up…' : 'Get My AI Number'}
+            {saving ? 'Setting up…' : completingExisting ? 'Submit for Activation' : 'Get My AI Number'}
           </button>
 
           <p className="text-xs text-gray-400 text-center mt-4">
