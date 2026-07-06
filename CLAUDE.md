@@ -234,8 +234,8 @@ BizzyBot gives businesses an AI agent that:
 
 ### Launch Checklist (critical path — in order)
 
-- [ ] **1. SMS onboarding page rework** — replace fake demo flow with real `/api/sms/provision` call + collect business address (required for toll-free verification); show verification-pending state
-- [ ] **2. End-to-end SMS test with a real number** — signup → toll-free purchase → TFV submission → approval (3-5 biz days) → text the number → AI replies → lead logged. TFV pipeline has never run live
+- [x] **1. SMS onboarding page rework** — DONE. Real provision flow, business info + business type + EIN collection, verification-pending states, needs-info/retry handling
+- [~] **2. End-to-end SMS test with a real number** — SUBMISSION VERIFIED 2026-07-06: (866) 944-5685 provisioned + toll-free verification submitted to Twilio (confirmed by Twilio email + blue "being activated" screen). Full text-reply test pending carrier approval (3-5 biz days). Fixed en route: profile-save (legacy user_id/clerk_user_id type mismatch, business_profiles NOT-NULL user_id, ON CONFLICT, error-masking), TFV needs SDK-bypass direct API call (SDK 4.23 drops BusinessType), business type + EIN + contact name + state-code normalization
 - [ ] **3. Vapi voice end-to-end test** — same number: call it, AI answers, transcript + minutes logged (test list in "Built but Untested" section)
 - [ ] **4. Outlook email end-to-end test** — or disable for launch if broken
 - [ ] **5. Production cleanup + security pass** — remove/protect debug & test routes (`test-fixes`, `debug-issues`, `amanda`, `test-ai`, `test-db-update`, `inspect-database`, `inspect-messages`, `fix-*`, `cleanup-database-issues`, `setup-database` etc.); verify no unauthenticated admin/debug endpoints
