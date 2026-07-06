@@ -8,6 +8,20 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   : null;
 
+const TRIAL_DAYS = 14;
+
+// A customer may provision a number if they have a Stripe subscription
+// (paid or trialing) or are still within their 14-day signup trial.
+function hasActiveAccess(customer) {
+  if (!customer) return false;
+  if (customer.stripe_subscription_id) return true;
+  if (customer.created_at) {
+    const ageMs = Date.now() - new Date(customer.created_at).getTime();
+    if (ageMs < TRIAL_DAYS * 24 * 60 * 60 * 1000) return true;
+  }
+  return false;
+}
+
 async function ensureTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS customer_phone_numbers (
@@ -62,10 +76,24 @@ export async function POST(request) {
     }
 
     const customerResult = await query(
-      `SELECT id, business_name FROM customers WHERE clerk_user_id = $1 LIMIT 1`, [userId]
+      `SELECT id, business_name, created_at, stripe_subscription_id
+       FROM customers WHERE clerk_user_id::text = $1 OR user_id::text = $1
+       ORDER BY id ASC LIMIT 1`,
+      [userId]
     );
     const customer = customerResult.rows[0];
     const customerId = customer?.id;
+
+    // Gate: only paying/trialing customers can provision a number (which costs
+    // money on BizzyBot's Twilio account). Allow an active Stripe subscription
+    // or anyone still within their 14-day trial from signup.
+    if (!hasActiveAccess(customer)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Your free trial has ended. Please choose a plan to activate your AI number.',
+        needsSubscription: true,
+      }, { status: 402 });
+    }
 
     // Buy a toll-free number on demand (no A2P 10DLC needed — verification
     // is submitted per-number below and takes ~3-5 business days)
