@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs';
 import { query } from '@/lib/database.js';
 import { generateAIResponse } from '@/lib/ai-service.js';
 import { checkEmailFilter } from '@/lib/email-filtering.js';
@@ -267,23 +268,35 @@ async function processAccount(conn) {
 
 export async function POST(request) {
   try {
+    // Two callers: the hourly cron (bearer CRON_SECRET, processes a named
+    // account) or a logged-in user clicking "check now" (processes their own).
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    let connectionRow;
+    if (isCron) {
+      const { emailAddress } = await request.json().catch(() => ({}));
+      const result = await query(
+        `SELECT * FROM outlook_connections WHERE outlook_email = $1 AND status = 'connected' LIMIT 1`,
+        [emailAddress]
+      );
+      connectionRow = result.rows[0];
+    } else {
+      const { userId } = auth();
+      if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const result = await query(
+        `SELECT * FROM outlook_connections WHERE user_id = $1 AND status = 'connected'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+      connectionRow = result.rows[0];
     }
 
-    const { emailAddress } = await request.json();
-
-    const result = await query(
-      `SELECT * FROM outlook_connections WHERE outlook_email = $1 AND status = 'connected' LIMIT 1`,
-      [emailAddress]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Connection not found' });
+    if (!connectionRow) {
+      return NextResponse.json({ success: false, error: 'No connected Outlook account found' }, { status: 404 });
     }
 
-    const processed = await processAccount(result.rows[0]);
+    const processed = await processAccount(connectionRow);
     return NextResponse.json({ success: true, totalProcessed: processed });
 
   } catch (error) {
