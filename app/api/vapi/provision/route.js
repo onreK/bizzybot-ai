@@ -52,10 +52,13 @@ export async function POST(request) {
 
     await ensureVapiSchema();
 
+    // Key on the phone-number row (clerk_user_id is reliably set there) and
+    // resolve customer_id resiliently (legacy user_id/clerk_user_id split).
     const numberResult = await query(
-      `SELECT cpn.id, cpn.phone_number, cpn.vapi_assistant_id, cpn.vapi_phone_number_id, c.id as customer_id
+      `SELECT cpn.id, cpn.phone_number, cpn.vapi_assistant_id, cpn.vapi_phone_number_id,
+              COALESCE(cpn.customer_id, c.id) AS customer_id
        FROM customer_phone_numbers cpn
-       JOIN customers c ON c.clerk_user_id = $1
+       LEFT JOIN customers c ON (c.clerk_user_id::text = $1 OR c.user_id::text = $1)
        WHERE cpn.clerk_user_id = $1 AND cpn.status = 'active'
        LIMIT 1`,
       [userId]
@@ -101,9 +104,9 @@ export async function PATCH(request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const numberResult = await query(
-      `SELECT cpn.vapi_assistant_id, c.id as customer_id
+      `SELECT cpn.vapi_assistant_id, COALESCE(cpn.customer_id, c.id) AS customer_id
        FROM customer_phone_numbers cpn
-       JOIN customers c ON c.clerk_user_id = $1
+       LEFT JOIN customers c ON (c.clerk_user_id::text = $1 OR c.user_id::text = $1)
        WHERE cpn.clerk_user_id = $1 AND cpn.status = 'active' AND cpn.vapi_assistant_id IS NOT NULL
        LIMIT 1`,
       [userId]
