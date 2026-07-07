@@ -280,8 +280,9 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 8b. [ ] Open bizzybotai.com/dashboard on an actual phone: hamburger opens/closes the sidebar drawer, pages navigate, bell works. Check the **Email page** especially (split inbox is the tightest fit on small screens; may need a mobile-specific pass before launch).
 
 **Then resume launch checklist:**
-9. [ ] Item 6 — landing page pass (multi-industry: broad hero + industries section w/ per-vertical pain-lines; replace fabricated claims; add Voice AI to hero)
-10. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
+9. [x] Item 6 — landing page pass DONE 2026-07-08 (`79137a8`): voice-first hero, 6-feature grid (Voice first + Scheduling), Industries section (trades/real estate/salons/clinics) replacing fake testimonials, founding-customer strip (BIZZYFOUNDER 50%/12mo) replacing "500+ businesses" + fake stats, FB/IG marked coming soon
+10. [ ] **FINAL DEEP DIVE (founder-requested, pre-launch):** audit 4 subsystems the way we audited Overview (truth → clarity → priority): **(a) Analytics page** (shares the ai_analytics_events skew — total_interactions counts regex-detected behaviors not real interactions; verify every card), **(b) Lead Management** (leads page + lead detail + contacts pipeline; do all channels create leads? SMS persistence is new), **(c) Calendar booking** (Outlook calendar AI booking end-to-end + [BOOK:] marker + scheduling link autosend), **(d) Documents/forms sending + receiving** (document link sending feature — what exists, does it work, is "receiving" even built?)
+11. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
 
 **Nice-to-haves:**
 - "Check now" button for Outlook (currently console/hourly-cron triggered)
