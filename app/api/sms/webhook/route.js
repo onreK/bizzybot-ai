@@ -11,8 +11,45 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   : null;
 
 // In-memory storage for conversations and customer configs
+// (kept for same-instance reply context; the DB below is the source of truth)
 const conversations = new Map();
 const customerConfigs = new Map();
+
+// Persist an SMS exchange to the shared conversations/messages tables so the
+// dashboards can show real data (the in-memory Map is wiped on every deploy).
+async function persistSmsExchange(clerkUserId, contactPhone, inboundBody, outboundBody, hotLeadScore) {
+  if (!clerkUserId) return;
+  try {
+    await query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS contact_phone TEXT`).catch(() => {});
+
+    let convId;
+    const existing = await query(
+      `SELECT id FROM conversations WHERE user_id = $1 AND type = 'sms' AND contact_phone = $2 LIMIT 1`,
+      [clerkUserId, contactPhone]
+    );
+    if (existing.rows.length > 0) {
+      convId = existing.rows[0].id;
+    } else {
+      const created = await query(
+        `INSERT INTO conversations (user_id, type, status, contact_phone) VALUES ($1, 'sms', 'active', $2) RETURNING id`,
+        [clerkUserId, contactPhone]
+      );
+      convId = created.rows[0]?.id;
+    }
+    if (!convId) return;
+
+    await query(
+      `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'user', $2, $3)`,
+      [convId, inboundBody, JSON.stringify({ from: contactPhone })]
+    );
+    await query(
+      `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'assistant', $2, $3)`,
+      [convId, outboundBody, JSON.stringify({ hotLeadScore: hotLeadScore || 0 })]
+    );
+  } catch (err) {
+    console.error('⚠️ [SMS-WEBHOOK] Failed to persist conversation:', err.message);
+  }
+}
 
 // Look up which customer owns this Twilio 'To' number
 async function resolveCustomerFromTwilioNumber(toNumber) {
@@ -176,6 +213,9 @@ export async function POST(request) {
 
     // Update conversation in storage
     conversations.set(conversationKey, conversation);
+
+    // Persist to the database so dashboards survive restarts/deploys
+    await persistSmsExchange(resolvedClerkUserId, fromNumber, messageBody, aiResponse, aiResult.hotLead?.score);
 
     console.log('✅ SMS processed successfully with centralized AI service:', {
       conversationId: conversationKey,

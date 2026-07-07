@@ -228,7 +228,7 @@ BizzyBot gives businesses an AI agent that:
 
 ## 🚀 Launch Plan (added 2026-07-06)
 
-**Positioning decision:** Market trades/home-services-first ("never miss a call again"), multi-industry under the hood. Launch channels: **SMS AI + Voice AI + Web Chat + Outlook email**. Facebook/Instagram/Gmail = "coming soon" (pending external approvals — not launch blockers).
+**Positioning decision (REVISED 2026-07-07):** Broad "local/client-facing businesses" hero — founder explicitly does NOT want to pigeonhole into trades (works for real estate agents, salons, therapists, etc.). Follow the Podium/Rosie pattern: multi-industry headline + an **industries section** with one pain-line per vertical (trades: "never miss a call from a job site" · real estate: "first agent to respond wins the listing" · salons: "bookings answered while your hands are busy" · therapists: "full waiting room, zero phone tag"). Launch channels: **SMS AI + Voice AI + Web Chat + Outlook email**. Facebook/Instagram/Gmail = "coming soon" (pending external approvals — not launch blockers).
 
 **Market context:** Gap between reputation giants (Podium $399+, Birdeye $299+, GHL $97+$97 AI add-on) and voice-only bots (Rosie $49, Goodcall $79, Jobber AI $99). BizzyBot = multi-channel AI at solo-shop prices ($29/$69/$199). Window is ~12-18 months before voice bots add channels. Unit economics: ~70% gross margin on Pro tier.
 
@@ -242,7 +242,7 @@ BizzyBot gives businesses an AI agent that:
 - [x] **5. Production cleanup + security pass** — DONE 2026-07-06: deleted 20 dev/debug/migration routes+pages (incl. fully-public setup-database and all DB-mutation tools), removed stale public routes, fixed contact-email demo link. DB audit run (admin-gated `/api/admin/db-audit`): NO duplicate customer rows, 0 null clerk_ids, healthy data. Healed 8 legacy rows where user_id != clerk_user_id → 0 mismatched. Customers table fully consistent.
 - [x] **5b. Gate number provisioning behind active subscription/trial** — DONE 2026-07-06: `/api/sms/provision` now checks `hasActiveAccess` (Stripe subscription present OR within 14-day trial from created_at) before buying a number; returns 402 needsSubscription otherwise. NOTE: gate treats presence of stripe_subscription_id as active (doesn't verify canceled status via Stripe — tighten later if needed).
 - [x] **Subscription route fixed** — DONE 2026-07-06: `/api/customer/subscription` had old price IDs + $99/$299/$799 + "enterprise" (missing "business"), which broke real checkout (upgrade to Business = "Invalid plan"; Starter/Pro checkout used dead price IDs). Now uses correct current price IDs + $29/$69/$199 + starter/professional/business, guarded against legacy plan values.
-- [ ] **6. Trades-first landing page pass** — lead with missed-call pain ($1,200/missed call, 85% of voicemail callers never call back), trades language, keep multi-industry capability
+- [ ] **6. Landing page pass (multi-industry)** — keep broad hero, add industries section (trades/real estate/salons/therapists pain-lines), lead with missed-call/missed-lead pain, replace fabricated claims ("500+ businesses", fake testimonials) with honest founding-customer framing, mention Voice AI in hero (currently omitted)
 - [ ] **7. Launch prep** — pick ~10 founding customers (local trades), BIZZYFOUNDER coupon ready, one case study plan
 
 ### External (parallel, not blocking)

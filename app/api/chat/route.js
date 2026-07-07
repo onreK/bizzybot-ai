@@ -23,6 +23,54 @@ try {
   dbAvailable = false;
 }
 
+// GET: dashboard data — ?action=conversations (web chat history) or
+// ?action=test-connection (is the chat AI available). Previously only POST
+// existed, so the Overview page got 405s and Web Chat always showed "Not set up".
+export async function GET(req) {
+  try {
+    const { userId } = auth();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const action = new URL(req.url).searchParams.get('action');
+
+    if (action === 'test-connection') {
+      return NextResponse.json({ connected: !!process.env.OPENAI_API_KEY });
+    }
+
+    if (action === 'conversations') {
+      if (!dbAvailable) {
+        return NextResponse.json({ conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0 });
+      }
+      const result = await db.query(
+        `SELECT c.id, c.created_at, COUNT(m.id) AS message_count, MAX(m.created_at) AS last_message_at
+         FROM conversations c
+         LEFT JOIN messages m ON m.conversation_id = c.id
+         WHERE c.type = 'chat' AND c.user_id = $1
+         GROUP BY c.id
+         ORDER BY last_message_at DESC NULLS LAST
+         LIMIT 50`,
+        [userId]
+      );
+      const conversations = result.rows.map(r => ({
+        id: r.id,
+        createdAt: r.created_at,
+        messageCount: parseInt(r.message_count, 10) || 0,
+      }));
+      return NextResponse.json({
+        conversations,
+        totalConversations: conversations.length,
+        totalMessages: conversations.reduce((acc, c) => acc + c.messageCount, 0),
+        leadsGenerated: 0, // chat doesn't capture contact info yet — don't fake it
+      });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (error) {
+    console.error('❌ Chat GET error:', error);
+    return NextResponse.json({ error: 'Failed to load chat data' }, { status: 500 });
+  }
+}
+
 export async function POST(req) {
   console.log('💬 === CHAT API WITH CENTRALIZED AI SERVICE ===');
   

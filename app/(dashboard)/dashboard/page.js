@@ -7,7 +7,7 @@ import {
   Users, MessageCircle, Phone, Mail,
   Target, ArrowUpRight, Activity, RefreshCw,
   AlertCircle, ChevronRight, UserCheck, CheckCircle,
-  Facebook, Instagram, Zap, ExternalLink, Flame, Bot, Clock
+  Facebook, Instagram, Zap, ExternalLink, Flame, Bot, Clock, Mic
 } from 'lucide-react';
 
 export default function MainDashboard() {
@@ -26,6 +26,9 @@ export default function MainDashboard() {
     email: { conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0, hotLeadsToday: 0, aiEngagementRate: 0, emailSettings: null, templates: [] },
     facebook: { conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0, postsManaged: 0, aiResponseRate: 0, pageConnected: false, lastSync: null },
     instagram: { conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0, postsManaged: 0, aiResponseRate: 0, accountConnected: false, lastSync: null },
+    voice: { provisioned: false, hasNumber: false, calls: 0, minutesUsed: 0 },
+    smsProvisioned: false,
+    outlookConnected: false,
     combined: { totalLeads: 0, totalConversations: 0, totalMessages: 0, hotLeadsToday: 0 },
     analytics: { phoneRequestsToday: 0, hotLeadsMonth: 0, hotLeadsToday: 0, appointmentsScheduled: 0, totalInteractions: 0, aiEngagementRate: 0, avgResponseTime: 0, leadsCapture: 0, effectiveness: 0 }
   });
@@ -41,7 +44,14 @@ export default function MainDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-    const interval = setInterval(loadDashboardData, 30000);
+    // Only poll the lightweight notifications feed — the full load fires a
+    // dozen requests and is available via the Refresh button.
+    const interval = setInterval(() => {
+      fetch('/api/notifications')
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (d) setRecentActivity((d.notifications || []).slice(0, 8)); })
+        .catch(() => {});
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -80,7 +90,7 @@ export default function MainDashboard() {
               appointmentsScheduled: d.analytics.overview?.appointments_month || 0,
               totalInteractions: d.analytics.overview?.total_interactions_month || 0,
               aiEngagementRate: d.analytics.overview?.ai_engagement_rate || 0,
-              avgResponseTime: d.analytics.overview?.avg_response_speed_minutes || 2,
+              avgResponseTime: d.analytics.overview?.avg_response_speed_minutes || 0,
               leadsCapture: d.analytics.overview?.total_leads_captured || 0,
               effectiveness: d.analytics.overview?.effectiveness_score || 0
             };
@@ -93,18 +103,63 @@ export default function MainDashboard() {
         }
       } catch {}
 
+      // Facebook — real endpoints (/api/social/* never existed; cards always showed disconnected)
       let facebookData = { conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0, postsManaged: 0, aiResponseRate: 0, pageConnected: false, lastSync: null };
-      try { const r = await fetch('/api/social/facebook/stats'); if (r.ok) { const d = await r.json(); facebookData = { conversations: d.conversations || [], totalConversations: d.totalConversations || 0, totalMessages: d.totalMessages || 0, leadsGenerated: d.leadsGenerated || 0, postsManaged: d.postsManaged || 0, aiResponseRate: d.aiResponseRate || 0, pageConnected: d.pageConnected || false, lastSync: d.lastSync }; } } catch {}
+      try {
+        const [statusRes, statsRes] = await Promise.all([fetch('/api/facebook/status'), fetch('/api/facebook/stats')]);
+        if (statusRes.ok) { const s = await statusRes.json(); facebookData.pageConnected = !!s.configured; }
+        if (statsRes.ok) {
+          const d = await statsRes.json();
+          const replied = (d.messagesReplied || 0) + (d.commentReplies || 0);
+          facebookData.totalConversations = replied;
+          facebookData.totalMessages = replied;
+          facebookData.leadsGenerated = d.leadsFromFacebook || 0;
+        }
+      } catch {}
 
+      // Instagram — real endpoints
       let instagramData = { conversations: [], totalConversations: 0, totalMessages: 0, leadsGenerated: 0, postsManaged: 0, aiResponseRate: 0, accountConnected: false, lastSync: null };
-      try { const r = await fetch('/api/social/instagram/stats'); if (r.ok) { const d = await r.json(); instagramData = { conversations: d.conversations || [], totalConversations: d.totalConversations || 0, totalMessages: d.totalMessages || 0, leadsGenerated: d.leadsGenerated || 0, postsManaged: d.postsManaged || 0, aiResponseRate: d.aiResponseRate || 0, accountConnected: d.accountConnected || false, lastSync: d.lastSync }; } } catch {}
+      try {
+        const [statusRes, statsRes] = await Promise.all([fetch('/api/instagram/status'), fetch('/api/instagram/stats')]);
+        if (statusRes.ok) { const s = await statusRes.json(); instagramData.accountConnected = !!s.configured; }
+        if (statsRes.ok) {
+          const d = await statsRes.json();
+          const replied = (d.dmsReplied || 0) + (d.commentReplies || 0);
+          instagramData.totalConversations = replied;
+          instagramData.totalMessages = replied;
+          instagramData.leadsGenerated = d.leadsFromInstagram || 0;
+        }
+      } catch {}
+
+      // Voice AI — headline channel, previously missing from Overview entirely
+      let voiceData = { provisioned: false, hasNumber: false, calls: 0, minutesUsed: 0 };
+      try {
+        const [provRes, statsRes] = await Promise.all([fetch('/api/vapi/provision'), fetch('/api/vapi/stats')]);
+        if (provRes.ok) { const p = await provRes.json(); voiceData.provisioned = !!p.provisioned; voiceData.hasNumber = !!p.hasNumber; }
+        if (statsRes.ok) { const s = await statsRes.json(); voiceData.calls = (s.calls || []).length; voiceData.minutesUsed = s.minutesUsed || 0; }
+      } catch {}
+
+      // SMS provisioned status (the conversations endpoint doesn't carry it)
+      let smsProvisioned = false;
+      try { const r = await fetch('/api/sms/provision'); if (r.ok) { const p = await r.json(); smsProvisioned = !!p.assigned; } } catch {}
+
+      // Outlook — counts as email connected (check was Gmail-only before)
+      let outlookConnected = false;
+      try { const r = await fetch('/api/auth/outlook/status'); if (r.ok) { const o = await r.json(); outlookConnected = !!o.connected; } } catch {}
 
       const webChat = { conversations: webChatData.conversations || [], totalConversations: webChatData.totalConversations || 0, totalMessages: webChatData.totalMessages || 0, leadsGenerated: webChatData.leadsGenerated || 0, aiStatus: aiStatusData.connected ? 'connected' : 'disconnected' };
       const sms = { conversations: smsData.conversations || [], totalConversations: smsData.totalConversations || 0, totalMessages: smsData.totalMessages || 0, leadsGenerated: smsData.leadsGenerated || 0, phoneNumbers: smsData.phoneNumbers || [], hotLeadAlerts: smsData.hotLeadAlerts || [], hotLeadStats: smsData.hotLeadStats || { totalHotLeads: 0, alertsLast24h: 0, averageScore: 0, highestScore: 0 } };
       const email = { conversations: emailConversations, totalConversations: emailConversations.length, totalMessages: emailMessages, leadsGenerated: emailLeads, hotLeadsToday: emailHotLeadsToday, aiEngagementRate, emailSettings: emailSettingsData.settings, templates: emailTemplatesData.templates || [] };
-      const combined = { totalLeads: analyticsData.leadsCapture || (webChat.leadsGenerated + sms.leadsGenerated + email.leadsGenerated + facebookData.leadsGenerated + instagramData.leadsGenerated), totalConversations: analyticsData.totalInteractions || (webChat.totalConversations + sms.totalConversations + email.totalConversations + facebookData.totalConversations + instagramData.totalConversations), totalMessages: analyticsData.totalInteractions || (webChat.totalMessages + sms.totalMessages + email.totalMessages + facebookData.totalMessages + instagramData.totalMessages), hotLeadsToday: analyticsData.hotLeadsToday || (sms.hotLeadStats.alertsLast24h + email.hotLeadsToday) };
+      const combined = {
+        totalLeads: analyticsData.leadsCapture || (webChat.leadsGenerated + sms.leadsGenerated + email.leadsGenerated + facebookData.leadsGenerated + instagramData.leadsGenerated),
+        totalConversations: analyticsData.totalInteractions || (webChat.totalConversations + sms.totalConversations + email.totalConversations + facebookData.totalConversations + instagramData.totalConversations + voiceData.calls),
+        // Real message count — was aliased to totalInteractions, making the
+        // Conversations and Total Messages cards always show the same number
+        totalMessages: webChat.totalMessages + sms.totalMessages + email.totalMessages + facebookData.totalMessages + instagramData.totalMessages,
+        hotLeadsToday: analyticsData.hotLeadsToday || (sms.hotLeadStats.alertsLast24h + email.hotLeadsToday),
+      };
 
-      setDashboardData({ webChat, sms, email, facebook: facebookData, instagram: instagramData, combined, analytics: analyticsData });
+      setDashboardData({ webChat, sms, email, facebook: facebookData, instagram: instagramData, voice: voiceData, smsProvisioned, outlookConnected, combined, analytics: analyticsData });
       setDailyTrend(trendData);
 
       try {
@@ -246,18 +301,27 @@ export default function MainDashboard() {
 
   const channels = [
     {
-      id: 'email', name: 'Email AI', icon: Mail, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/10 border-blue-500/20',
+      id: 'email', name: 'Email AI', icon: Mail, iconColor: 'text-cyan-400', iconBg: 'bg-cyan-500/10 border-cyan-500/20',
       href: '/email', setupHref: '/email',
-      connected: !!dashboardData.email.emailSettings,
+      connected: !!dashboardData.email.emailSettings || dashboardData.outlookConnected,
       conversations: dashboardData.email.totalConversations,
       leads: dashboardData.email.leadsGenerated,
     },
     {
-      id: 'sms', name: 'SMS', icon: Phone, iconColor: 'text-green-400', iconBg: 'bg-green-500/10 border-green-500/20',
+      id: 'sms', name: 'SMS', icon: Phone, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/10 border-blue-500/20',
       href: '/customer-sms-dashboard', setupHref: '/customer-sms-dashboard',
-      connected: (dashboardData.sms.phoneNumbers?.length || 0) > 0,
+      connected: dashboardData.smsProvisioned,
       conversations: dashboardData.sms.totalConversations,
       leads: dashboardData.sms.leadsGenerated,
+    },
+    {
+      id: 'voice', name: 'Voice AI', icon: Mic, iconColor: 'text-violet-400', iconBg: 'bg-violet-500/10 border-violet-500/20',
+      href: '/voice', setupHref: '/voice',
+      connected: dashboardData.voice.provisioned,
+      conversations: dashboardData.voice.calls,
+      leads: 0,
+      statLabels: ['Calls', 'Min used'],
+      statOverride: [dashboardData.voice.calls, dashboardData.voice.minutesUsed],
     },
     {
       id: 'webchat', name: 'Web Chat', icon: MessageCircle, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-500/10 border-emerald-500/20',
@@ -268,14 +332,14 @@ export default function MainDashboard() {
     },
     {
       id: 'facebook', name: 'Facebook', icon: Facebook, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/10 border-blue-500/20',
-      href: '/facebook-setup', setupHref: '/facebook-setup',
+      href: '/facebook', setupHref: '/facebook',
       connected: dashboardData.facebook.pageConnected,
       conversations: dashboardData.facebook.totalConversations,
       leads: dashboardData.facebook.leadsGenerated,
     },
     {
       id: 'instagram', name: 'Instagram', icon: Instagram, iconColor: 'text-pink-400', iconBg: 'bg-pink-500/10 border-pink-500/20',
-      href: '/instagram-setup', setupHref: '/instagram-setup',
+      href: '/instagram', setupHref: '/instagram',
       connected: dashboardData.instagram.accountConnected,
       conversations: dashboardData.instagram.totalConversations,
       leads: dashboardData.instagram.leadsGenerated,
@@ -299,8 +363,13 @@ export default function MainDashboard() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
             {(() => {
-              const emailConnected = !!dashboardData.email.emailSettings?.email;
-              const anyConnected = emailConnected || dashboardData.webChat.aiStatus === 'connected';
+              const emailConnected = !!dashboardData.email.emailSettings?.email || dashboardData.outlookConnected;
+              const anyConnected = emailConnected
+                || dashboardData.webChat.aiStatus === 'connected'
+                || dashboardData.smsProvisioned
+                || dashboardData.voice.provisioned
+                || dashboardData.facebook.pageConnected
+                || dashboardData.instagram.accountConnected;
               if (anyConnected) return <>
                 <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="text-gray-400">AI Active</span>
@@ -350,7 +419,7 @@ export default function MainDashboard() {
               style={{ width: `${(channels.filter(c => c.connected).length / channels.length) * 100}%` }}
             />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {channels.map(ch => (
               <button
                 key={ch.id}
@@ -391,7 +460,7 @@ export default function MainDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard icon={Users} title="Total Leads" value={dashboardData.analytics?.leadsCapture || dashboardData.combined.totalLeads} subtitle="All channels" color="blue" />
         <StatCard icon={MessageCircle} title="Conversations" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalConversations} subtitle="All channels" color="green" />
-        <StatCard icon={Activity} title="Total Messages" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalMessages} subtitle="AI responses" color="purple" />
+        <StatCard icon={Activity} title="Total Messages" value={dashboardData.combined.totalMessages} subtitle="Across all channels" color="purple" />
         <StatCard icon={Target} title="Hot Leads (24h)" value={dashboardData.analytics?.hotLeadsToday || dashboardData.combined.hotLeadsToday} subtitle="High intent" color="orange" />
         {/* AI Automation Rate */}
         <div className="relative overflow-hidden rounded-xl border border-gray-800 p-5 bg-[#161B22]">
@@ -422,7 +491,7 @@ export default function MainDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {channels.map(channel => (
             <div
               key={channel.id}
@@ -456,12 +525,12 @@ export default function MainDashboard() {
               {/* Stats */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-[#0D1117] rounded-lg p-2.5">
-                  <p className="text-lg font-bold text-white">{channel.conversations}</p>
-                  <p className="text-[10px] text-gray-500">Conversations</p>
+                  <p className="text-lg font-bold text-white">{channel.statOverride ? channel.statOverride[0] : channel.conversations}</p>
+                  <p className="text-[10px] text-gray-500">{channel.statLabels ? channel.statLabels[0] : 'Conversations'}</p>
                 </div>
                 <div className="bg-[#0D1117] rounded-lg p-2.5">
-                  <p className="text-lg font-bold text-white">{channel.leads}</p>
-                  <p className="text-[10px] text-gray-500">Leads</p>
+                  <p className="text-lg font-bold text-white">{channel.statOverride ? channel.statOverride[1] : channel.leads}</p>
+                  <p className="text-[10px] text-gray-500">{channel.statLabels ? channel.statLabels[1] : 'Leads'}</p>
                 </div>
               </div>
 
