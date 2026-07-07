@@ -155,10 +155,17 @@ async function processAccount(conn) {
       // Skip emails sent to yourself (own replies)
       if (fromEmail.toLowerCase() === conn.outlook_email.toLowerCase()) { diag.skippedSelf++; continue; }
 
-      // Filter out automated senders
+      // Filter out automated senders. checkEmailFilter expects an object
+      // (same shape Gmail uses) and returns { shouldFilter }.
       const bodyText = msg.body?.content?.replace(/<[^>]*>/g, ' ').trim() || '';
-      const filterResult = await checkEmailFilter(fromEmail, msg.subject || '', bodyText);
-      if (filterResult?.skip) {
+      const filterResult = await checkEmailFilter({
+        from: fromEmail,
+        subject: msg.subject || '',
+        body: bodyText,
+        headers: {},
+        isMassEmail: false,
+      });
+      if (filterResult?.shouldFilter) {
         console.log(`⏭️ Outlook skipping automated email from ${fromEmail}`);
         diag.skippedAutomated++;
         continue;
