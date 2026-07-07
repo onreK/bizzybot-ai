@@ -252,6 +252,9 @@ BizzyBot gives businesses an AI agent that:
 ### Post-launch backlog
 Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships) → near-real-time email replies (Gmail/Outlook push notifications instead of hourly cron)
 
+### Security cleanup backlog
+- [ ] Add Twilio signature verification to `/api/sms/webhook` (reuse `lib/twilio-verify.js`, validate against `${BASE_URL}/api/sms/webhook`). Lower risk than the voice routes (no outbound alerts fired), so deferred from the 2026-07-07 voice security pass.
+
 ---
 
 ## ☀️ NEXT SESSION TODO (start here — 2026-07-08)
@@ -264,6 +267,9 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 
 **SMS:**
 5. [ ] Check Twilio toll-free verification status for (866) 944-5685 (submitted 2026-07-06, ~3-5 biz days → likely ready ~07-09/07-11). Once "Verified," **text the number** to test SMS AI end-to-end. (SMS text AI uses the same OpenAI key as email — confirm it's funded.)
+
+**Call forwarding (built 2026-07-07 — needs live test):**
+5b. [ ] On `/voice` → Call Handling: set cell **858-900-4220**, mode "Ring my phone first", ~18s, Save. Then call (866) 944-5685: (a) answer → confirm connected; (b) let it ring out → AI picks up + **email** missed-lead alert arrives. Missed-call **text** won't deliver until the toll-free is SMS-verified (item 5).
 
 **Bugs noticed but not yet fixed (console errors on /email dashboard):**
 6. [ ] `api/chat?action=conversations` → 405, `api/chat?action=test-connection` → 405
@@ -280,6 +286,19 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 ---
 
 ## Session Log
+
+### Session — 2026-07-07 (continued)
+**Call forwarding (ring owner first → AI backup) + voice webhook security**
+
+- **Call forwarding built** — inbound calls to the toll-free number now ring the owner's cell first (~18s, configurable), then hand the live caller to the AI on no-answer so no lead is lost. On no-answer the owner also gets a **text + email** missed-lead alert. A toggle switches the order: **"Ring my phone first"** (default) vs **"AI answers first."**
+  - New endpoints: `app/api/voice/incoming/route.js` (TwiML entry — reads customer's mode/cell/ring, `<Dial>` cell then `<Redirect>` to Vapi, or straight to AI), `app/api/voice/fallback/route.js` (no-answer handler — email via `sendHotLeadAlert` + Twilio SMS from toll-free + `<Redirect>` to Vapi), `app/api/vapi/call-settings/route.js` (GET/POST the forward_cell/call_mode/ring_seconds).
+  - New Call Handling card on `/voice` dashboard (mode buttons + cell input + ring seconds + Save).
+  - **Voice routing take-over:** `lib/voice-routing.js` `ensureVoiceRouting()` captures Vapi's inbound URL (stored as `vapi_voice_url`) then points the Twilio number's Voice URL at `/api/voice/incoming`. Safe/idempotent — only takes over if it knows where the AI lives, so it never breaks AI answering. Runs on vapi/provision (both paths) AND on call-settings Save (so the already-provisioned number activates without a re-provision).
+  - DB: `customer_phone_numbers` gains `vapi_voice_url`, `forward_cell`, `call_mode` (DEFAULT 'human_first'), `ring_seconds` (DEFAULT 18) — auto-created.
+  - `/api/voice/(.*)` added to middleware publicRoutes (Twilio calls TwiML with no Clerk session).
+  - Test cell for now: **858-900-4220**. Missed-call SMS won't deliver until the toll-free is SMS-verified; email alert works immediately.
+- **Voice webhook security (flagged by automated review):** both public voice routes now require a valid `X-Twilio-Signature` before doing any work (`lib/twilio-verify.js` → `isValidTwilioRequest`, validates against `${BASE_URL}/api/voice/{incoming,fallback}`). Fails closed → 403 on missing/invalid sig. Prevents strangers from triggering the missed-call SMS/email (spam/toll-fraud) or leaking the owner's forwarding number.
+- **CLEANUP FOR LATER:** apply the same Twilio signature verification to `/api/sms/webhook` (also public). Lower risk (no outbound alerts fired), so deferred — reuse `lib/twilio-verify.js`, validate against `${BASE_URL}/api/sms/webhook`.
 
 ### Session — 2026-07-07
 **Email channel deep hardening — Gmail + Outlook**
