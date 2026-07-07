@@ -1220,62 +1220,42 @@ export default function CompleteEmailSystem() {
         </div>
       )}
 
-      {/* UPDATED: New 4-Metric Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* AI Responses Sent */}
+      {/* 4-Metric Stats Grid — matches the Voice/SMS card style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">AI Responses</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.totalResponsesSent || autoPollStatus.totalResponsesSent}</p>
-              <p className="text-xs text-gray-500 mt-1">Total sent</p>
-            </div>
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <Send className="w-5 h-5 text-green-400" />
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Send className="w-4 h-4 text-gray-500" />
+            <p className="text-xs text-gray-500 uppercase tracking-wide">AI Responses</p>
           </div>
+          <p className="text-2xl font-bold text-white">{stats.totalResponsesSent || autoPollStatus.totalResponsesSent}</p>
+          <p className="text-xs text-gray-500 mt-1">Total sent</p>
         </div>
 
-        {/* Leads Captured */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Leads Captured</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.totalLeadsCaptured}</p>
-              <p className="text-xs text-gray-500 mt-1">With contact info</p>
-            </div>
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <UserCheck className="w-5 h-5 text-blue-400" />
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <UserCheck className="w-4 h-4 text-gray-500" />
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Leads Captured</p>
           </div>
+          <p className="text-2xl font-bold text-white">{stats.totalLeadsCaptured}</p>
+          <p className="text-xs text-gray-500 mt-1">With contact info</p>
         </div>
 
-        {/* Meetings Booked */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Meetings Booked</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.meetingsBooked}</p>
-              <p className="text-xs text-gray-500 mt-1">This month</p>
-            </div>
-            <div className="p-2 rounded-lg bg-purple-500/10">
-              <Calendar className="w-5 h-5 text-purple-400" />
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-4 h-4 text-gray-500" />
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Meetings Booked</p>
           </div>
+          <p className="text-2xl font-bold text-white">{stats.meetingsBooked}</p>
+          <p className="text-xs text-gray-500 mt-1">This month</p>
         </div>
 
-        {/* Response Time */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Response Time</p>
-              <p className="text-2xl font-bold text-white mt-1">{formatTime(stats.avgResponseTimeMinutes)}</p>
-              <p className="text-xs text-gray-500 mt-1">Average speed</p>
-            </div>
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <Clock className="w-5 h-5 text-orange-400" />
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Response Time</p>
           </div>
+          <p className="text-2xl font-bold text-white">{formatTime(stats.avgResponseTimeMinutes)}</p>
+          <p className="text-xs text-gray-500 mt-1">Average speed</p>
         </div>
       </div>
 
@@ -2094,9 +2074,14 @@ export default function CompleteEmailSystem() {
     <div className="p-8 space-y-6">
 
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Email</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Gmail automation with smart AI responses and filtering</p>
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center">
+          <Mail className="w-5 h-5 text-cyan-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Email</h1>
+          <p className="text-sm text-gray-500">Gmail + Outlook — your AI replies to every email, 24/7</p>
+        </div>
       </div>
 
       {/* Internal Tabs */}

@@ -112,9 +112,14 @@ export default function InstagramDashboard() {
     <div className="p-8 space-y-6">
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Instagram</h1>
-        <p className="text-sm text-gray-500 mt-0.5">AI-powered DM and comment automation</p>
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-pink-500/10 border border-pink-500/20 rounded-lg flex items-center justify-center">
+          <Instagram className="w-5 h-5 text-pink-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Instagram</h1>
+          <p className="text-sm text-gray-500">AI-powered DM and comment automation</p>
+        </div>
       </div>
 
       {/* Message banner */}
@@ -218,22 +223,17 @@ export default function InstagramDashboard() {
           )}
 
           {/* Stat cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {statCards.map(card => {
               const Icon = card.icon;
-              const colors = COLOR[card.color];
               return (
                 <div key={card.label} className="bg-[#161B22] rounded-xl border border-gray-800 p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{card.label}</p>
-                      <p className="text-2xl font-bold text-white mt-1">{card.value}</p>
-                      <p className="text-xs text-gray-500 mt-1">{card.subtext}</p>
-                    </div>
-                    <div className={`p-2 rounded-lg ${colors.bg}`}>
-                      <Icon className={`w-5 h-5 ${colors.text}`} />
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className="w-4 h-4 text-gray-500" />
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">{card.label}</p>
                   </div>
+                  <p className="text-2xl font-bold text-white">{card.value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{card.subtext}</p>
                 </div>
               );
             })}

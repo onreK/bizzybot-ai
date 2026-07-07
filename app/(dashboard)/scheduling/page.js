@@ -60,16 +60,16 @@ export default function SchedulingPage() {
   return (
     <div className="p-6 max-w-2xl">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 bg-violet-500/20 border border-violet-500/30 rounded-lg flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-violet-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Scheduling</h1>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-10 h-10 bg-violet-500/10 border border-violet-500/20 rounded-lg flex items-center justify-center">
+          <Calendar className="w-5 h-5 text-violet-400" />
         </div>
-        <p className="text-gray-400 text-sm">
-          Connect your booking page so the AI can send it automatically when customers ask to schedule.
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Scheduling</h1>
+          <p className="text-sm text-gray-500">
+            Connect your booking page so the AI can send it automatically when customers ask to schedule.
+          </p>
+        </div>
       </div>
 
       {/* Booking URL */}
