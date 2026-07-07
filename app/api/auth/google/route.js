@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { auth } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
+import crypto from 'crypto';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
 
 // Google OAuth configuration
 const oauth2Client = new google.auth.OAuth2(
@@ -24,38 +29,40 @@ const SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
 ];
 
-export async function GET(request) {
-  console.log('🚀 === GMAIL OAUTH STARTER (NO AUTH REQUIRED) ===');
-  
+export async function GET() {
+  console.log('🚀 === GMAIL OAUTH STARTER (secure server session) ===');
+
   try {
-    // Read userId from URL param — ConnectionsTab always sends ?userId=<clerkId>
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || searchParams.get('user') || 'anonymous';
+    // Identify the user from the verified Clerk session — never trust a URL param.
+    const { userId } = auth();
+    if (!userId) return NextResponse.redirect(`${BASE_URL}/sign-in`);
 
-    console.log('🔗 Starting Gmail OAuth flow for user:', userId);
-
-    // Check if environment variables exist
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       console.error('❌ Missing Google OAuth credentials');
-      return NextResponse.json({ 
-        error: 'Google OAuth not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to environment variables.' 
+      return NextResponse.json({
+        error: 'Google OAuth not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to environment variables.'
       }, { status: 500 });
     }
 
-    console.log('✅ Google OAuth credentials found');
-
-    // Generate the authorization URL
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline', // Important: get refresh token
-      scope: SCOPES,
-      state: userId, // Pass user ID in state for verification
-      prompt: 'consent', // Force consent screen to get refresh token
-      include_granted_scopes: true // Include previously granted scopes
+    // Bind a random nonce to the verified userId in an httpOnly cookie. The
+    // callback trusts this cookie, not anything Google echoes back in the URL.
+    const nonce = crypto.randomBytes(32).toString('hex');
+    cookies().set('google_oauth_state', `${userId}:${nonce}`, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 600,
+      path: '/',
     });
 
-    console.log('✅ Generated OAuth URL:', authUrl.substring(0, 100) + '...');
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: SCOPES,
+      state: nonce,
+      prompt: 'consent',
+      include_granted_scopes: true,
+    });
 
-    // Redirect to Google OAuth
     return NextResponse.redirect(authUrl);
 
   } catch (error) {

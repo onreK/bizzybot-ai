@@ -45,9 +45,10 @@ export default authMiddleware({
     "/_next/static(.*)",
     "/_next/image(.*)",
     "/favicon.ico",
-    "/api/auth/google",
+    // Gmail initiation must run through Clerk so it can read the session
+    // (server-verified user id). Only the callback is ignored (Google redirects
+    // there without a Clerk session; it verifies via the state cookie).
     "/api/auth/google/callback",
-    "/api/auth/google/status",
     "/api/auth/facebook/callback",
     "/api/auth/outlook/callback"
   ]

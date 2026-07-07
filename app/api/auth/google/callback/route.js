@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { cookies } from 'next/headers';
 import { query } from '@/lib/database.js';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
 
 // Google OAuth configuration
 const oauth2Client = new google.auth.OAuth2(
@@ -18,40 +21,31 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-    const state = searchParams.get('state'); // This contains the Clerk user ID
+    const state = searchParams.get('state'); // random nonce, verified against cookie
     const error = searchParams.get('error');
-    const test = searchParams.get('test'); // For testing
-
-    console.log('📧 Gmail OAuth callback received');
-    console.log('📋 Code present:', !!code);
-    console.log('👤 State (userId):', state);
-    console.log('❌ Error param:', error);
-    console.log('🧪 Test mode:', !!test);
-
-    // Handle test mode
-    if (test) {
-      console.log('🧪 TEST MODE - Callback route is working!');
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Callback route is working!',
-        timestamp: new Date().toISOString()
-      });
-    }
 
     if (error) {
       console.error('❌ OAuth error parameter:', error);
-      return NextResponse.redirect(`https://bizzybotai.com/email?tab=connections&error=oauth_denied&details=${error}`);
+      return NextResponse.redirect(`${BASE_URL}/email?tab=connections&error=oauth_denied&details=${error}`);
     }
-
     if (!code) {
-      console.error('❌ Missing authorization code');
-      return NextResponse.redirect(`https://bizzybotai.com/email?tab=connections&error=missing_code`);
+      return NextResponse.redirect(`${BASE_URL}/email?tab=connections&error=missing_code`);
     }
 
-    if (!state) {
-      console.error('❌ Missing state parameter (user ID)');
-      return NextResponse.redirect(`https://bizzybotai.com/email?tab=connections&error=missing_user_id`);
+    // Verify the state nonce against the httpOnly cookie set at initiation.
+    // The user id comes from the cookie (server-verified) — never from the URL.
+    const cookieStore = cookies();
+    const stateCookie = cookieStore.get('google_oauth_state')?.value;
+    cookieStore.delete('google_oauth_state');
+
+    if (!stateCookie) {
+      return NextResponse.redirect(`${BASE_URL}/email?tab=connections&error=state_missing`);
     }
+    const [cookieUserId, cookieNonce] = stateCookie.split(':');
+    if (!cookieUserId || !cookieNonce || cookieNonce !== state) {
+      return NextResponse.redirect(`${BASE_URL}/email?tab=connections&error=state_mismatch`);
+    }
+    const verifiedUserId = cookieUserId;
 
     console.log('🔄 Step 1: Exchanging authorization code for tokens...');
     
@@ -81,7 +75,7 @@ export async function GET(request) {
     // Save to database
     try {
       const connectionData = {
-        user_id: state,
+        user_id: verifiedUserId,
         gmail_email: userEmail,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
@@ -148,7 +142,7 @@ export async function GET(request) {
 
     // Create connection object for memory storage
     const memoryConnectionData = {
-      userId: state,
+      userId: verifiedUserId,
       email: userEmail,
       userName: userInfo.data.name,
       googleUserId: userInfo.data.id,
@@ -162,14 +156,14 @@ export async function GET(request) {
     };
 
     // Store the connection in memory
-    global.gmailConnections.set(state, memoryConnectionData);
+    global.gmailConnections.set(verifiedUserId, memoryConnectionData);
     
     console.log('✅ Step 4 Complete: Gmail connection stored in memory');
     console.log('📈 Total Gmail connections stored:', global.gmailConnections.size);
     console.log('🔍 Stored connection keys:', Array.from(global.gmailConnections.keys()));
 
     // Verify both storage methods worked
-    const storedConnection = global.gmailConnections.get(state);
+    const storedConnection = global.gmailConnections.get(verifiedUserId);
     if (storedConnection) {
       console.log('✅ VERIFICATION: Connection successfully retrieved from memory');
       console.log('📧 Stored email:', storedConnection.email);
@@ -180,7 +174,7 @@ export async function GET(request) {
     console.log('🔄 Step 5: Redirecting to success page...');
 
     // Create success URL with detailed parameters - REDIRECT TO /email WITH CONNECTIONS TAB
-    const successUrl = `https://bizzybotai.com/email?tab=connections&success=gmail_connected&email=${encodeURIComponent(userEmail)}&userId=${encodeURIComponent(state)}&timestamp=${Date.now()}`;
+    const successUrl = `${BASE_URL}/email?tab=connections&success=gmail_connected&email=${encodeURIComponent(userEmail)}&userId=${encodeURIComponent(verifiedUserId)}&timestamp=${Date.now()}`;
     
     console.log('🔗 Redirect URL:', successUrl);
     console.log('🎉 === GMAIL OAUTH CALLBACK COMPLETED SUCCESSFULLY ===');
