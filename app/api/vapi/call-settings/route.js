@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { query } from '@/lib/database.js';
+import { ensureVoiceRouting } from '@/lib/voice-routing.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,13 +54,19 @@ export async function POST(request) {
     const result = await query(
       `UPDATE customer_phone_numbers
        SET forward_cell = $1, call_mode = $2, ring_seconds = $3, updated_at = CURRENT_TIMESTAMP
-       WHERE clerk_user_id = $4 AND status = 'active'`,
+       WHERE clerk_user_id = $4 AND status = 'active'
+       RETURNING id, twilio_sid, vapi_voice_url`,
       [cell || null, mode, ring, userId]
     );
 
     if (result.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'No active number found. Provision your SMS/voice number first.' }, { status: 404 });
     }
+
+    // Make sure the toll-free number routes through BizzyBot so the new
+    // settings actually take effect (safe/idempotent; no-op if already set).
+    const saved = result.rows[0];
+    await ensureVoiceRouting(saved.twilio_sid, saved.id, saved.vapi_voice_url);
 
     return NextResponse.json({ success: true, forwardCell: cell, callMode: mode, ringSeconds: ring });
   } catch (error) {
