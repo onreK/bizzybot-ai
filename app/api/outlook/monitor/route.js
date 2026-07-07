@@ -204,11 +204,7 @@ async function processAccount(conn) {
         continue;
       }
 
-      // Send reply
-      await sendReply(accessToken, msg.id, aiResult.response);
-      await markAsRead(accessToken, msg.id);
-
-      // Save conversation + message
+      // Ensure the conversation exists (needed before we can record the message)
       await ensureTables();
       let convResult = await query(
         `SELECT id FROM outlook_conversations
@@ -233,14 +229,33 @@ async function processAccount(conn) {
         convId = ins.rows[0]?.id;
       }
 
-      if (convId) {
-        await query(
-          `INSERT INTO outlook_messages (conversation_id, outlook_message_id, direction, content, ai_response, sent_at)
-           VALUES ($1, $2, 'inbound', $3, $4, NOW())
-           ON CONFLICT (outlook_message_id) DO NOTHING`,
-          [convId, msg.id, bodyText.slice(0, 5000), aiResult.response]
-        ).catch(() => {});
+      // Can't safely dedup without a conversation row — skip sending to avoid spam.
+      if (!convId) {
+        diag.errors = diag.errors || [];
+        diag.errors.push(`no conversation id for ${msg.id}`);
+        continue;
       }
+
+      // CLAIM the message first: insert the dedup row before sending. If the row
+      // already exists (another run handled it), we get no row back and skip the
+      // send — this makes double-replies impossible.
+      const claim = await query(
+        `INSERT INTO outlook_messages (conversation_id, outlook_message_id, direction, content, ai_response, sent_at)
+         VALUES ($1, $2, 'inbound', $3, $4, NOW())
+         ON CONFLICT (outlook_message_id) DO NOTHING
+         RETURNING id`,
+        [convId, msg.id, bodyText.slice(0, 5000), aiResult.response]
+      ).catch(() => ({ rows: [] }));
+
+      if (claim.rows.length === 0) {
+        diag.skippedProcessed++;
+        await markAsRead(accessToken, msg.id).catch(() => {});
+        continue;
+      }
+
+      // We own this message — send the reply and mark it read.
+      await sendReply(accessToken, msg.id, aiResult.response);
+      await markAsRead(accessToken, msg.id);
 
       // Track lead
       await createOrUpdateContact(customer.id, {

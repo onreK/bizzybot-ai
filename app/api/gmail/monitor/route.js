@@ -417,8 +417,31 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
       'Gmail API list messages'
     );
 
-    const messages = response.data.messages || [];
-    console.log(`📬 Found ${messages.length} unread emails`);
+    let messages = response.data.messages || [];
+
+    // Exclude emails we've already answered. Gmail can't be marked read (no
+    // modify scope), so the gmail_responded table is our source of truth.
+    try {
+      await query(`CREATE TABLE IF NOT EXISTS gmail_responded (
+        id SERIAL PRIMARY KEY,
+        message_id TEXT UNIQUE,
+        clerk_user_id TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`).catch(() => {});
+      const ids = messages.map(m => m.id);
+      if (ids.length) {
+        const answered = await query(
+          `SELECT message_id FROM gmail_responded WHERE message_id = ANY($1)`,
+          [ids]
+        ).catch(() => ({ rows: [] }));
+        const answeredSet = new Set(answered.rows.map(r => r.message_id));
+        messages = messages.filter(m => !answeredSet.has(m.id));
+      }
+    } catch (dedupErr) {
+      console.log('⚠️ Gmail dedup filter skipped:', dedupErr.message);
+    }
+
+    console.log(`📬 Found ${messages.length} unread emails (after dedup)`);
 
     if (messages.length === 0) {
       return NextResponse.json({
@@ -861,6 +884,29 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
       }
 
       console.log(`✅ Email from ${fromEmail} passed all filters - preparing response`);
+    }
+
+    // ── Dedup claim ──────────────────────────────────────────────────────────
+    // Gmail lacks the modify scope (no $15k audit), so we can't mark emails
+    // read. The database is our dedup: claim this message BEFORE generating or
+    // sending. If it's already claimed, another run answered it — skip so we
+    // never send duplicate replies. Only claim on real sends, not previews.
+    if (actualSend) {
+      await query(`CREATE TABLE IF NOT EXISTS gmail_responded (
+        id SERIAL PRIMARY KEY,
+        message_id TEXT UNIQUE,
+        clerk_user_id TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`).catch(() => {});
+      const claim = await query(
+        `INSERT INTO gmail_responded (message_id, clerk_user_id)
+         VALUES ($1, $2) ON CONFLICT (message_id) DO NOTHING RETURNING id`,
+        [emailId, connection.user_id || null]
+      ).catch(() => ({ rows: [] }));
+      if (claim.rows.length === 0) {
+        console.log(`⏭️ Already responded to ${emailId} — skipping duplicate`);
+        return NextResponse.json({ success: true, alreadyResponded: true, message: 'Already responded to this email' });
+      }
     }
 
     // 🎯 UPDATED: DECIDE WHETHER TO USE CUSTOM RESPONSE OR GENERATE AI RESPONSE
