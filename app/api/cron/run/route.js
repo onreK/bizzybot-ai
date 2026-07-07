@@ -21,7 +21,7 @@ export async function POST(request) {
   let gmailResults = [];
   try {
     const connections = await query(
-      `SELECT gmail_email FROM gmail_connections WHERE status = 'connected'`
+      `SELECT DISTINCT gmail_email FROM gmail_connections WHERE status = 'connected'`
     );
 
     console.log(`📧 Running Gmail check for ${connections.rows.length} connected account(s)`);
@@ -46,6 +46,16 @@ export async function POST(request) {
           error: data.error || null
         });
 
+        // Retire dead connections so they stop erroring every hour.
+        // Reconnecting from the dashboard sets status back to 'connected'.
+        if (data.error && /expired|reconnect/i.test(data.error)) {
+          await query(
+            `UPDATE gmail_connections SET status = 'expired' WHERE gmail_email = $1`,
+            [conn.gmail_email]
+          ).catch(() => {});
+          console.log(`🗑️ Gmail ${conn.gmail_email}: marked expired (token dead) — will skip until reconnected`);
+        }
+
         console.log(`✅ Gmail ${conn.gmail_email}: processed=${data.totalProcessed || 0}, followups=${data.followupsSent || 0}`);
       } catch (err) {
         console.error(`❌ Gmail ${conn.gmail_email} failed:`, err.message);
@@ -60,7 +70,7 @@ export async function POST(request) {
   let outlookResults = [];
   try {
     const connections = await query(
-      `SELECT outlook_email FROM outlook_connections WHERE status = 'connected'`
+      `SELECT DISTINCT outlook_email FROM outlook_connections WHERE status = 'connected'`
     ).catch(() => ({ rows: [] }));
 
     console.log(`📧 Running Outlook check for ${connections.rows.length} connected account(s)`);

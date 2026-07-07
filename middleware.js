@@ -32,6 +32,8 @@ export default authMiddleware({
     "/api/facebook/data-deletion",
     // Cron endpoint - protected by CRON_SECRET bearer token, not Clerk
     "/api/cron/run",
+    // Railway healthcheck probe (no session)
+    "/api/health",
     "/api/stripe/webhook",
     // Gmail + Outlook monitor called internally by cron (no Clerk session available)
     "/api/gmail/monitor",
