@@ -48,29 +48,27 @@ export default function CustomerSMSDashboard() {
         highestScore: 0
       };
 
-      // Try to get configuration for the first phone number found
-      if (conversationsData.conversations && conversationsData.conversations.length > 0) {
-        const phoneNumber = conversationsData.conversations[0].toNumber;
-        
-        try {
-          const configResponse = await fetch(`/api/customer-sms/configure-ai?phoneNumber=${phoneNumber}`);
-          if (configResponse.ok) {
-            const configData = await configResponse.json();
-            smsConfig = configData.config;
-
-            // Load hot lead alerts if business owner phone is configured
-            if (smsConfig?.businessOwnerPhone) {
-              const alertsResponse = await fetch(`/api/business-owner-alerts?phone=${encodeURIComponent(smsConfig.businessOwnerPhone)}`);
-              if (alertsResponse.ok) {
-                const alertsData = await alertsResponse.json();
-                hotLeadAlerts = alertsData.alerts || [];
-                hotLeadStats = alertsData.stats || hotLeadStats;
-              }
-            }
-          }
-        } catch (configError) {
-          console.warn('Could not load SMS configuration:', configError);
+      // Read the provisioned number + verification status directly (source of
+      // truth) — not from conversations, which don't exist until texts arrive.
+      try {
+        const provRes = await fetch('/api/sms/provision');
+        const prov = await provRes.json();
+        if (prov?.assigned && prov?.phoneNumber) {
+          let businessName = 'Your Business';
+          try {
+            const profRes = await fetch('/api/customer/update-profile');
+            const profData = await profRes.json();
+            businessName = profData?.profile?.businessName || businessName;
+          } catch { /* ignore */ }
+          smsConfig = {
+            phoneNumber: prov.phoneNumber,
+            businessName,
+            verificationStatus: prov.verificationStatus || null,
+            verified: !!prov.verified,
+          };
         }
+      } catch (configError) {
+        console.warn('Could not load SMS provisioning:', configError);
       }
 
       setDashboardData({
@@ -312,37 +310,22 @@ export default function CustomerSMSDashboard() {
                       <span>{dashboardData.smsConfig.businessName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium">🤖 Personality:</span>
-                      <span className="capitalize">{dashboardData.smsConfig.personality}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">📝 Model:</span>
-                      <span>{dashboardData.smsConfig.model}</span>
+                      <span className="font-medium">📶 Status:</span>
+                      <span className={dashboardData.smsConfig.verified ? 'text-green-500' : 'text-yellow-500'}>
+                        {dashboardData.smsConfig.verified
+                          ? '✅ Active — texting live'
+                          : dashboardData.smsConfig.verificationStatus === 'needs_info'
+                            ? '⚠️ Needs business info'
+                            : '⏳ Pending carrier verification'}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="font-medium">🔥 Hot Lead Alerts:</span>
-                      <span className={dashboardData.smsConfig.enableHotLeadAlerts ? 'text-green-600' : 'text-red-600'}>
-                        {dashboardData.smsConfig.enableHotLeadAlerts ? '✅ Enabled' : '❌ Disabled'}
-                      </span>
-                    </div>
-                    {dashboardData.smsConfig.enableHotLeadAlerts && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="font-medium">📞 Alert Phone:</span>
-                          <span className="font-mono">{dashboardData.smsConfig.businessOwnerPhone || 'Not set'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">🕐 Business Hours:</span>
-                          <span>{dashboardData.smsConfig.alertBusinessHours ? '✅ Enabled' : '❌ 24/7'}</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="font-medium">📅 Last Updated:</span>
-                      <span>{new Date(dashboardData.smsConfig.updatedAt).toLocaleDateString()}</span>
-                    </div>
+                    <p className="text-sm text-gray-400 leading-relaxed">
+                      {dashboardData.smsConfig.verified
+                        ? 'Your AI is answering texts on this number 24/7. Put it on your website, Google listing, ads, and signage so leads can reach you.'
+                        : 'Carriers are verifying your number (usually 1–5 business days). Once approved, your AI automatically answers texts — we\'ll email you the moment it\'s live.'}
+                    </p>
                   </div>
                 </div>
               ) : (
