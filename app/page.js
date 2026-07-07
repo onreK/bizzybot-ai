@@ -8,11 +8,12 @@ import {
   Brain, ArrowRight, CheckCircle, Star, Zap,
   MessageSquare, Mail, Smartphone, BarChart3,
   Menu, X, Bot, ChevronRight, TrendingUp, Shield,
+  Phone, Wrench, Home, Scissors, HeartHandshake,
 } from 'lucide-react';
 
 function DashboardPreview() {
   const leads = [
-    { name: 'Sarah Mitchell', score: 94, channel: 'Email', message: 'I want to schedule a consultation this week', time: '2m', hot: true },
+    { name: 'Sarah Mitchell', score: 94, channel: 'Voice', message: 'Called about a consultation this week — AI booked it', time: '2m', hot: true },
     { name: 'James Kowalski', score: 71, channel: 'SMS', message: 'What are your rates for a full inspection?', time: '9m', hot: false },
     { name: 'Maria Lopez', score: 68, channel: 'Chat', message: 'Do you service the downtown area?', time: '17m', hot: false },
   ];
@@ -91,7 +92,7 @@ function DashboardPreview() {
 
           <div className="mt-4 flex items-center gap-2 text-xs text-gray-600">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            AI is monitoring 5 channels in real time
+            AI is monitoring 6 channels in real time
           </div>
         </div>
       </div>
@@ -110,16 +111,22 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: <Mail className="w-5 h-5" />,
+      icon: <Phone className="w-5 h-5" />,
       gradient: 'from-violet-600 to-purple-600',
-      title: 'Email AI',
-      description: 'Reads every inbound email, drafts a personalized reply in your voice, and sends it in under 60 seconds — even at 2am.',
+      title: 'AI Voice Calls',
+      description: 'Your AI answers your business line 24/7 — or rings your cell first and only picks up if you can\'t. Every call transcribed, summarized, and scored.',
     },
     {
       icon: <Smartphone className="w-5 h-5" />,
       gradient: 'from-blue-600 to-cyan-600',
       title: 'SMS AI',
-      description: 'Responds to texts instantly. Follows up with cold leads automatically after a set delay — so no lead goes quiet.',
+      description: 'Responds to texts instantly on the same number your AI answers calls on — so no lead goes quiet while your hands are full.',
+    },
+    {
+      icon: <Mail className="w-5 h-5" />,
+      gradient: 'from-cyan-600 to-blue-600',
+      title: 'Email AI',
+      description: 'Reads every inbound email, drafts a personalized reply in your voice, and sends it — even at 2am.',
     },
     {
       icon: <MessageSquare className="w-5 h-5" />,
@@ -131,7 +138,13 @@ export default function HomePage() {
       icon: <BarChart3 className="w-5 h-5" />,
       gradient: 'from-amber-500 to-orange-600',
       title: 'Lead Intelligence',
-      description: 'Every conversation gets a lead score. Hot leads surface instantly so you focus on closing, not sorting through noise.',
+      description: 'Every conversation gets a lead score. Hot leads surface instantly — with a text + email alert the moment one appears.',
+    },
+    {
+      icon: <Zap className="w-5 h-5" />,
+      gradient: 'from-rose-600 to-orange-600',
+      title: 'Scheduling',
+      description: 'The AI shares your booking link — or books directly on your calendar and sends the invite — when a lead is ready.',
     },
   ];
 
@@ -139,7 +152,7 @@ export default function HomePage() {
     {
       step: '01',
       title: 'Connect your channels',
-      body: 'Link your Gmail, Twilio SMS number, and web chat widget in under 10 minutes. No code, no developers required.',
+      body: 'Get your business number (AI answers calls and texts on it), connect your email, and drop the chat widget on your site — all in under 10 minutes.',
     },
     {
       step: '02',
@@ -153,24 +166,26 @@ export default function HomePage() {
     },
   ];
 
-  const testimonials = [
+  const industries = [
     {
-      name: 'Dr. Sarah M.',
-      role: 'Medical Practice Owner',
-      content: 'We went from missing 40% of after-hours inquiries to capturing every single one. New patient bookings are up 3× in 90 days.',
-      rating: 5,
+      icon: <Wrench className="w-5 h-5" />,
+      name: 'Trades & Home Services',
+      pain: 'Never miss a call from a crawlspace again. The AI answers while you\'re on the job — and texts you when it\'s a hot one.',
     },
     {
-      name: 'Mike T.',
-      role: 'Home Services Owner',
-      content: 'I used to spend 2 hours a day answering the same questions over and over. Now BizzyBot handles it. I just show up to jobs.',
-      rating: 5,
+      icon: <Home className="w-5 h-5" />,
+      name: 'Real Estate',
+      pain: 'The first agent to respond usually wins the listing. Your AI replies to every inquiry in seconds — even during showings.',
     },
     {
-      name: 'Lisa C.',
-      role: 'Fitness Studio Founder',
-      content: 'The automated follow-up feature alone recovered 18 leads I would have lost. It paid for itself in the first week.',
-      rating: 5,
+      icon: <Scissors className="w-5 h-5" />,
+      name: 'Salons & Studios',
+      pain: 'Bookings answered while your hands are busy. The AI shares your booking link and fills your calendar between clients.',
+    },
+    {
+      icon: <HeartHandshake className="w-5 h-5" />,
+      name: 'Clinics & Practices',
+      pain: 'Full waiting room, zero phone tag. After-hours inquiries get answered, qualified, and scheduled before you open.',
     },
   ];
 
@@ -179,7 +194,7 @@ export default function HomePage() {
       name: 'Starter',
       price: '$29',
       description: 'Solo operators and small businesses getting started with AI',
-      features: ['300 AI responses/mo', 'Email, SMS & Web Chat AI', 'Facebook Messenger & Instagram DM AI', 'Voice AI — 15 min/mo', 'Lead tracking & analytics'],
+      features: ['300 AI responses/mo', 'Voice AI — 15 min/mo', 'Email, SMS & Web Chat AI', 'Facebook & Instagram AI (coming soon)', 'Lead tracking & analytics'],
       cta: 'Start free trial',
       popular: false,
     },
@@ -219,7 +234,7 @@ export default function HomePage() {
     'Multi-channel inbox',
     'Analytics dashboard',
     'Document link sending',
-    'Facebook & Instagram DMs',
+    'Facebook & Instagram DMs (coming soon)',
     'Custom AI tone & voice',
   ];
 
@@ -312,8 +327,8 @@ export default function HomePage() {
               </h1>
 
               <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                BizzyBot connects to your email, SMS, and web chat — then replies to every inquiry in under 60 seconds,
-                scores every lead, and follows up automatically so nothing falls through the cracks.
+                BizzyBot answers your calls, texts, emails, and web chat — replying to every inquiry in seconds,
+                scoring every lead, and alerting you the moment someone&apos;s ready to buy.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -339,22 +354,22 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Social proof strip */}
+        {/* Founding customer strip */}
         <section className="border-y border-white/[0.06] py-10 px-6 bg-white/[0.02]">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-3">
-              <div className="flex">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 text-amber-400 fill-current" />
-                ))}
-              </div>
-              <span className="text-gray-400 text-sm">500+ businesses rely on BizzyBot daily</span>
+              <span className="px-2.5 py-1 bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-semibold rounded-full whitespace-nowrap">
+                FOUNDING CUSTOMERS
+              </span>
+              <span className="text-gray-400 text-sm">
+                Be one of our first — <span className="text-white font-medium">50% off for 12 months</span> with code <span className="text-violet-300 font-mono">BIZZYFOUNDER</span>
+              </span>
             </div>
             <div className="flex gap-10 text-center">
               {[
-                { value: '< 60s', label: 'Avg. response time' },
-                { value: '94%', label: 'Lead capture rate' },
-                { value: '3×', label: 'More qualified meetings' },
+                { value: '24/7', label: 'Your AI never clocks out' },
+                { value: '6', label: 'Channels, one dashboard' },
+                { value: '10 min', label: 'Setup, no developers' },
               ].map((stat, i) => (
                 <div key={i}>
                   <div className="text-2xl font-bold text-white">{stat.value}</div>
@@ -402,7 +417,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
               {features.map((feature, i) => (
                 <div
                   key={i}
@@ -428,27 +443,26 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section id="testimonials" className="py-28 px-6">
+        {/* Industries */}
+        <section id="industries" className="py-28 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Results</div>
-              <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Businesses that never miss a lead</h2>
+              <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Built for your business</div>
+              <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Any business that lives on leads</h2>
+              <p className="text-gray-400 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
+                You describe your business once — pricing, services, tone — and the AI represents it on every channel.
+                No industry templates, no generic chatbot answers.
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
-                <div key={i} className="bg-[#0D1421] border border-[#1E2D40] rounded-2xl p-8">
-                  <div className="flex gap-0.5 mb-5">
-                    {[...Array(t.rating)].map((_, j) => (
-                      <Star key={j} className="w-4 h-4 text-amber-400 fill-current" />
-                    ))}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {industries.map((ind, i) => (
+                <div key={i} className="bg-[#0D1421] border border-[#1E2D40] rounded-2xl p-7 hover:border-[#2A3A55] transition-all duration-300">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-5">
+                    {ind.icon}
                   </div>
-                  <p className="text-gray-300 text-sm leading-relaxed mb-6">"{t.content}"</p>
-                  <div>
-                    <div className="text-white font-medium text-sm">{t.name}</div>
-                    <div className="text-gray-500 text-xs mt-0.5">{t.role}</div>
-                  </div>
+                  <h3 className="font-semibold text-white text-base mb-2">{ind.name}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{ind.pain}</p>
                 </div>
               ))}
             </div>
@@ -462,6 +476,9 @@ export default function HomePage() {
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Pricing</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Transparent, simple pricing</h2>
               <p className="text-gray-400 mt-4 text-sm">14-day free trial on every plan. No credit card required.</p>
+              <p className="text-violet-300 mt-2 text-sm">
+                Founding customers: <span className="font-semibold">50% off for 12 months</span> with code <span className="font-mono">BIZZYFOUNDER</span>
+              </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
