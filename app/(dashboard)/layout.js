@@ -8,7 +8,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, BarChart3, Mail, Phone, MessageCircle,
   Facebook, Instagram, Settings, Bot, LogOut, Target,
-  Bell, Flame, X, Calendar, Mic
+  Bell, Flame, X, Calendar, Mic, Menu
 } from 'lucide-react';
 
 const NAV = [
@@ -75,6 +75,12 @@ export default function DashboardLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [showPanel, setShowPanel] = useState(false);
   const [lastReadAt, setLastReadAt] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push('/sign-in');
@@ -129,8 +135,18 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex h-screen bg-[#0D1117] overflow-hidden">
 
-      {/* ── Sidebar ── */}
-      <aside className="w-60 flex-shrink-0 bg-[#0F1117] border-r border-gray-800 flex flex-col">
+      {/* Mobile drawer backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar (off-canvas drawer on mobile, static on desktop) ── */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-[#0F1117] border-r border-gray-800 flex flex-col transform transition-transform duration-200 md:relative md:translate-x-0 md:flex-shrink-0 md:z-auto ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
 
         {/* Brand */}
         <div className="px-4 py-5 border-b border-gray-800">
@@ -227,8 +243,8 @@ export default function DashboardLayout({ children }) {
             className="fixed inset-0 z-40"
             onClick={() => setShowPanel(false)}
           />
-          {/* Panel */}
-          <div className="fixed left-60 top-0 h-full w-80 z-50 bg-[#161B22] border-r border-gray-800 shadow-2xl flex flex-col">
+          {/* Panel — full-width on phones, docked next to the sidebar on desktop */}
+          <div className="fixed left-0 md:left-60 top-0 h-full w-full sm:w-80 z-50 bg-[#161B22] border-r border-gray-800 shadow-2xl flex flex-col">
             {/* Panel header */}
             <div className="px-4 py-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2">
@@ -322,10 +338,49 @@ export default function DashboardLayout({ children }) {
         </>
       )}
 
-      {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto min-w-0">
-        {children}
-      </main>
+      {/* ── Main column: mobile top bar + content ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* Mobile top bar (hidden on desktop) */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-[#0F1117] border-b border-gray-800 flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+              <Image
+                src="/Bizzybot Logo 2.png"
+                alt="BizzyBot"
+                width={28}
+                height={28}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <span className="text-white font-semibold text-sm truncate">BizzyBot AI</span>
+          </div>
+          <button
+            onClick={() => setShowPanel(p => !p)}
+            className="relative p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-auto flex-shrink-0"
+            aria-label="Notifications"
+          >
+            <Bell className={`w-4 h-4 ${unreadCount > 0 ? 'text-violet-400' : 'text-gray-500'}`} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-violet-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-y-auto min-w-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
