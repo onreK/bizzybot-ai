@@ -73,14 +73,15 @@ export async function GET() {
       messagesReplied,
       commentReplies,
       leadsFromFacebook,
-      avgResponseTime: '< 1 sec',
+      // Replies are webhook-driven; only claim speed once there's real activity.
+      avgResponseTime: (messagesReplied + commentReplies) > 0 ? '< 1 min' : '—',
       recentMessages,
     });
   } catch (error) {
     console.error('❌ Facebook stats error:', error);
     return NextResponse.json({
       messagesReplied: 0, commentReplies: 0, leadsFromFacebook: 0,
-      avgResponseTime: '< 1 sec', recentMessages: [],
+      avgResponseTime: '—', recentMessages: [],
     });
   }
 }

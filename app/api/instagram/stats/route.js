@@ -73,14 +73,15 @@ export async function GET() {
       dmsReplied,
       commentReplies,
       leadsFromInstagram,
-      avgResponseTime: '< 1 sec',
+      // Replies are webhook-driven; only claim speed once there's real activity.
+      avgResponseTime: (dmsReplied + commentReplies) > 0 ? '< 1 min' : '—',
       recentMessages,
     });
   } catch (error) {
     console.error('❌ Instagram stats error:', error);
     return NextResponse.json({
       dmsReplied: 0, commentReplies: 0, leadsFromInstagram: 0,
-      avgResponseTime: '< 1 sec', recentMessages: [],
+      avgResponseTime: '—', recentMessages: [],
     });
   }
 }

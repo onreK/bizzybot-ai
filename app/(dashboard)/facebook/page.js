@@ -38,7 +38,7 @@ export default function FacebookDashboard() {
   const [connection, setConnection] = useState(null);
   const [stats, setStats] = useState({
     messagesReplied: 0, commentReplies: 0,
-    leadsFromFacebook: 0, avgResponseTime: '< 1 sec', recentMessages: [],
+    leadsFromFacebook: 0, avgResponseTime: '—', recentMessages: [],
   });
   const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });

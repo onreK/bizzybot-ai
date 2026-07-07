@@ -38,7 +38,7 @@ export default function InstagramDashboard() {
   const [connection, setConnection] = useState(null);
   const [stats, setStats] = useState({
     dmsReplied: 0, commentReplies: 0,
-    leadsFromInstagram: 0, avgResponseTime: '< 1 sec', recentMessages: [],
+    leadsFromInstagram: 0, avgResponseTime: '—', recentMessages: [],
   });
   const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });

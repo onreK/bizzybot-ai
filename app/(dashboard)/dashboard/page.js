@@ -384,8 +384,8 @@ export default function MainDashboard() {
 
       {/* Top Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={Users} title="Total Leads" value={dashboardData.analytics?.leadsCapture || dashboardData.combined.totalLeads} subtitle="All channels" trend={23} color="blue" />
-        <StatCard icon={MessageCircle} title="Conversations" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalConversations} subtitle="All channels" trend={15} color="green" />
+        <StatCard icon={Users} title="Total Leads" value={dashboardData.analytics?.leadsCapture || dashboardData.combined.totalLeads} subtitle="All channels" color="blue" />
+        <StatCard icon={MessageCircle} title="Conversations" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalConversations} subtitle="All channels" color="green" />
         <StatCard icon={Activity} title="Total Messages" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalMessages} subtitle="AI responses" color="purple" />
         <StatCard icon={Target} title="Hot Leads (24h)" value={dashboardData.analytics?.hotLeadsToday || dashboardData.combined.hotLeadsToday} subtitle="High intent" color="orange" />
         {/* AI Automation Rate */}

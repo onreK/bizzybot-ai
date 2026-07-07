@@ -253,7 +253,7 @@ export default function HomePage() {
               <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
               <a href="#features" className="hover:text-white transition-colors">Features</a>
               <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-              <a href="/amanda" className="hover:text-white transition-colors">Demo</a>
+              <a href="/demo" className="hover:text-white transition-colors">Demo</a>
             </div>
 
             <div className="hidden md:flex items-center gap-3">
@@ -280,7 +280,7 @@ export default function HomePage() {
                 <a href="#how-it-works" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>How it works</a>
                 <a href="#features" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Features</a>
                 <a href="#pricing" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-                <a href="/amanda" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Demo</a>
+                <a href="/demo" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Demo</a>
                 <SignInButton mode="modal">
                   <button className="block text-gray-400 hover:text-white">Sign in</button>
                 </SignInButton>
@@ -324,7 +324,7 @@ export default function HomePage() {
                   </button>
                 </SignInButton>
                 <a
-                  href="/amanda"
+                  href="/demo"
                   className="flex items-center gap-2 border border-white/10 text-gray-300 px-7 py-3.5 rounded-xl hover:bg-white/5 transition-all text-sm"
                 >
                   See it in action
@@ -551,7 +551,7 @@ export default function HomePage() {
             <div className="flex gap-6 text-sm text-gray-500">
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
-              <a href="/amanda" className="hover:text-white transition-colors">Demo</a>
+              <a href="/demo" className="hover:text-white transition-colors">Demo</a>
             </div>
             <p className="text-xs text-gray-600">&copy; 2026 BizzyBot AI. All rights reserved.</p>
           </div>
