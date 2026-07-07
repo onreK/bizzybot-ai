@@ -1,8 +1,11 @@
 import { query } from '@/lib/database.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
+import { isValidTwilioRequest } from '@/lib/twilio-verify.js';
 import twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
 
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -27,9 +30,18 @@ function prettyPhone(n) {
 export async function POST(request) {
   try {
     const form = await request.formData();
-    const dialStatus = form.get('DialCallStatus') || '';
-    const to = form.get('To') || '';       // the toll-free number
-    const from = form.get('From') || '';   // the caller (lead)
+    const params = Object.fromEntries(form.entries());
+
+    // Reject anything not signed by Twilio — this route fires SMS/email alerts,
+    // so an unauthenticated trigger would be spam/toll-fraud abuse.
+    const signature = request.headers.get('x-twilio-signature');
+    if (!isValidTwilioRequest(signature, `${BASE_URL}/api/voice/fallback`, params)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    const dialStatus = params.DialCallStatus || '';
+    const to = params.To || '';       // the toll-free number
+    const from = params.From || '';   // the caller (lead)
 
     // Owner picked up — nothing more to do.
     if (dialStatus === 'completed') {

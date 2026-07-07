@@ -1,4 +1,5 @@
 import { query } from '@/lib/database.js';
+import { isValidTwilioRequest } from '@/lib/twilio-verify.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,16 @@ function toE164(raw) {
 export async function POST(request) {
   try {
     const form = await request.formData();
-    const to = form.get('To') || '';
+    const params = Object.fromEntries(form.entries());
+
+    // Reject anything not signed by Twilio (prevents unauthenticated callers
+    // from probing routing or leaking the owner's forwarding number).
+    const signature = request.headers.get('x-twilio-signature');
+    if (!isValidTwilioRequest(signature, `${BASE_URL}/api/voice/incoming`, params)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    const to = params.To || '';
 
     const res = await query(
       `SELECT forward_cell, call_mode, ring_seconds, vapi_voice_url
