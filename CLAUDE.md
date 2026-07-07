@@ -294,6 +294,15 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 
 ## Session Log
 
+### Session — 2026-07-08 (late night addendum)
+**Landing page pass · Time Saved fix · cron incident + hardening**
+
+- **Landing page pass shipped** (`79137a8`) — see Launch Checklist item 9 for details (voice-first hero, Industries section, honest founding-customer claims, FB/IG "coming soon").
+- **Time Saved metric fixed** (`46d3509`): only Gmail replies were counted (behavior tracker never logged `ai_response` events for SMS/chat/Outlook/FB/IG; only Gmail's monitor did via the lead system). Now every AI reply logs one baseline `ai_response` event (Gmail excluded — would double-count), and **voice minutes count minute-for-minute** into Time Saved. Counting effectively starts 2026-07-08.
+- **Cron "failure" diagnosed via Railway logs** (Railway CLI now authenticated as kernopay; use `railway logs --project 185b140f-a85a-44a4-97c3-86fb29d4d9ec --environment 29306b46-92bd-4abd-982e-bb1783829431 --service 30d2ca05-823a-4e4d-98ad-53e26cd1e6ba`): the 20:03 UTC run got a 502 because the app was mid-deploy (12 deploys that night). One-off, self-heals.
+- **Cron hardening** (`21e3346`): new public `/api/health` endpoint + founder set **Healthcheck Path = /api/health** on the BizzyBotAi service in the Railway dashboard → zero-downtime deploys (proof: next deploy's logs show a healthcheck step). Cron gmail/outlook queries now `SELECT DISTINCT` (logs showed 9 checks for ~4 unique emails — duplicate connection rows). Expired Gmail connections (ameliaknoa2026@, laquisha.pudz009@ were erroring hourly forever) are now auto-marked `status='expired'` and drop out of the loop until reconnected.
+- **NEXT SESSION = the final deep dive** (Launch Checklist item 10): analytics, lead management, calendar booking, documents/forms.
+
 ### Session — 2026-07-07 (evening)
 **Design system unification · Overview overhaul (3 phases) · mobile support · SMS persistence**
 
