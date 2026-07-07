@@ -30,7 +30,7 @@ export default function MainDashboard() {
     smsProvisioned: false,
     outlookConnected: false,
     combined: { totalLeads: 0, totalConversations: 0, totalMessages: 0, hotLeadsToday: 0 },
-    analytics: { phoneRequestsToday: 0, hotLeadsMonth: 0, hotLeadsToday: 0, appointmentsScheduled: 0, totalInteractions: 0, aiEngagementRate: 0, avgResponseTime: 0, leadsCapture: 0, effectiveness: 0 }
+    analytics: { phoneRequestsToday: 0, hotLeadsMonth: 0, hotLeadsToday: 0, appointmentsScheduled: 0, totalInteractions: 0, aiResponses: 0, aiEngagementRate: 0, avgResponseTime: 0, leadsCapture: 0, effectiveness: 0 }
   });
 
   // Redirect to onboarding if not yet completed
@@ -76,7 +76,7 @@ export default function MainDashboard() {
       emailMessages = emailConversations.reduce((acc, c) => acc + (c.messageCount || 0), 0);
       emailLeads = emailConversations.filter(c => c.status === 'lead').length;
 
-      let analyticsData = { phoneRequestsToday: 0, hotLeadsMonth: 0, hotLeadsToday: 0, appointmentsScheduled: 0, totalInteractions: 0, aiEngagementRate: 0, avgResponseTime: 0, leadsCapture: 0, effectiveness: 0 };
+      let analyticsData = { phoneRequestsToday: 0, hotLeadsMonth: 0, hotLeadsToday: 0, appointmentsScheduled: 0, totalInteractions: 0, aiResponses: 0, aiEngagementRate: 0, avgResponseTime: 0, leadsCapture: 0, effectiveness: 0 };
       let trendData = [];
       try {
         const r = await fetch('/api/customer/analytics?period=month');
@@ -89,6 +89,7 @@ export default function MainDashboard() {
               hotLeadsToday: d.analytics.overview?.hot_leads_today || 0,
               appointmentsScheduled: d.analytics.overview?.appointments_month || 0,
               totalInteractions: d.analytics.overview?.total_interactions_month || 0,
+              aiResponses: d.analytics.overview?.ai_responses_month || 0,
               aiEngagementRate: d.analytics.overview?.ai_engagement_rate || 0,
               avgResponseTime: d.analytics.overview?.avg_response_speed_minutes || 0,
               leadsCapture: d.analytics.overview?.total_leads_captured || 0,
@@ -441,6 +442,55 @@ export default function MainDashboard() {
         </div>
       )}
 
+      {/* Needs Attention — hot leads come before any stats */}
+      {recentActivity.length > 0 ? (
+        <div className="bg-[#161B22] border border-orange-500/20 rounded-xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-gray-800 flex items-center gap-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <h2 className="text-white font-semibold text-sm">Needs Attention</h2>
+            <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded-full font-medium">
+              {recentActivity.length}
+            </span>
+            <button
+              onClick={() => router.push('/leads')}
+              className="ml-auto text-xs text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              View all leads →
+            </button>
+          </div>
+          <div className="p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+            {recentActivity.slice(0, 8).map(item => {
+              const CIcon = CHANNEL_ICONS[item.channel?.toLowerCase()] || MessageCircle;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => router.push(item.href || '/leads')}
+                  className="flex items-start gap-3 p-2.5 rounded-lg bg-[#0D1117] border border-gray-800 hover:border-orange-500/40 transition-colors text-left"
+                >
+                  <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Flame className="w-3.5 h-3.5 text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-xs font-medium truncate">{item.description}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <CIcon className="w-3 h-3 text-gray-600" />
+                      <span className="text-gray-600 text-[10px] capitalize">{item.channel || 'web'}</span>
+                      <span className="text-gray-700 text-[10px]">·</span>
+                      <span className="text-gray-600 text-[10px]">{timeAgo(item.timestamp)}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 bg-[#161B22] border border-gray-800 rounded-xl px-5 py-3">
+          <Flame className="w-4 h-4 text-gray-600 flex-shrink-0" />
+          <p className="text-gray-500 text-sm">No hot leads right now — your AI is watching every channel.</p>
+        </div>
+      )}
+
       {/* Today — what's happening right now */}
       <div className="space-y-3">
         <h2 className="text-base font-semibold text-white">Today</h2>
@@ -481,22 +531,21 @@ export default function MainDashboard() {
               <p className="text-xs text-gray-600 mt-1">Across all channels</p>
             </div>
           </div>
-          {/* AI Automation Rate */}
+          {/* Time Saved — AI replies × ~3 min each */}
           <div className="relative overflow-hidden rounded-xl border border-gray-800 p-5 bg-[#161B22]">
             <div className="flex items-start justify-between">
               <div className="p-2 rounded-lg bg-white/5">
-                <Bot className="w-5 h-5 text-violet-400" />
+                <Zap className="w-5 h-5 text-green-400" />
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-bold text-white">{(dashboardData.analytics?.aiEngagementRate || 0).toFixed(1)}%</p>
-              <p className="text-sm text-gray-400 mt-0.5">AI Automation Rate</p>
-              <div className="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-violet-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(dashboardData.analytics?.aiEngagementRate || 0, 100)}%` }}
-                />
-              </div>
+              {(() => {
+                const mins = (dashboardData.analytics?.aiResponses || 0) * 3;
+                const label = mins >= 60 ? `${(mins / 60).toFixed(1)} hrs` : `${mins}m`;
+                return <p className="text-2xl font-bold text-white">{label}</p>;
+              })()}
+              <p className="text-sm text-gray-400 mt-0.5">Time Saved</p>
+              <p className="text-xs text-gray-600 mt-1">~3 min per AI reply</p>
             </div>
           </div>
         </div>
@@ -567,7 +616,7 @@ export default function MainDashboard() {
         </div>
       </div>
 
-      {/* Lead Pipeline + Recent Activity */}
+      {/* Lead Pipeline + Hot Leads Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Lead Pipeline Funnel */}
@@ -630,80 +679,28 @@ export default function MainDashboard() {
           })()}
         </div>
 
-        {/* Recent Activity */}
+        {/* Hot Leads Trend */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <Flame className="w-5 h-5 text-orange-400" />
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-violet-500/10">
+                <Zap className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Hot Leads Trend</h3>
+                <p className="text-xs text-gray-500">Last 7 days across all channels</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">Recent Activity</h3>
-              <p className="text-xs text-gray-500">Latest hot leads</p>
-            </div>
+            <button
+              onClick={() => router.push('/analytics')}
+              className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
+            >
+              Full report <ChevronRight className="w-3 h-3" />
+            </button>
           </div>
-          {recentActivity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Flame className="w-7 h-7 text-gray-700 mb-2" />
-              <p className="text-gray-500 text-sm">No activity yet</p>
-              <p className="text-gray-600 text-xs mt-1">Hot leads will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-3 overflow-y-auto max-h-48">
-              {recentActivity.map(item => {
-                const CIcon = CHANNEL_ICONS[item.channel?.toLowerCase()] || MessageCircle;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => router.push(item.href || '/leads')}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
-                  >
-                    <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Flame className="w-3.5 h-3.5 text-red-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-xs font-medium truncate">{item.description}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <CIcon className="w-3 h-3 text-gray-600" />
-                        <span className="text-gray-600 text-[10px] capitalize">{item.channel || 'web'}</span>
-                        <span className="text-gray-700 text-[10px]">·</span>
-                        <span className="text-gray-600 text-[10px]">{timeAgo(item.timestamp)}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <button
-            onClick={() => router.push('/leads')}
-            className="mt-4 w-full px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-xs font-medium transition-colors border border-orange-500/20"
-          >
-            View all leads →
-          </button>
-        </div>
-      </div>
-
-      {/* Hot Leads Trend — full width */}
-      <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-violet-500/10">
-              <Zap className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">Hot Leads Trend</h3>
-              <p className="text-xs text-gray-500">Last 7 days across all channels</p>
-            </div>
+          <div className="h-36">
+            <TrendChart data={dailyTrend} />
           </div>
-          <button
-            onClick={() => router.push('/analytics')}
-            className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
-          >
-            Full report <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
-        <div className="h-36">
-          <TrendChart data={dailyTrend} />
         </div>
       </div>
 
