@@ -1290,7 +1290,7 @@ export default function CompleteEmailSystem() {
                 <Inbox className="w-6 h-6 text-blue-400" />
                 <h3 className="text-xl font-semibold text-white">Email Conversations</h3>
                 <div className="ml-auto px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm font-medium">
-                  {gmailEmails.length + sentEmails.length} Total
+                  {gmailEmails.length + outlookEmails.length + sentEmails.length} Total
                 </div>
               </div>
               
@@ -1312,7 +1312,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-blue-500/20 text-blue-300'
                       }`}>
-                        {gmailEmails.length}
+                        {gmailEmails.length + outlookEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'inbox' && (
@@ -1347,8 +1347,8 @@ export default function CompleteEmailSystem() {
                 
                 <div className="flex items-center justify-between mt-3 text-sm text-gray-400">
                   <span>
-                    {activeEmailView === 'inbox' 
-                      ? 'Real-time Gmail monitoring with AI responses'
+                    {activeEmailView === 'inbox'
+                      ? 'Real-time Gmail + Outlook monitoring with AI responses'
                       : 'AI responses sent to customers'
                     }
                   </span>
@@ -1413,7 +1413,7 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {gmailEmails.length === 0 ? (
+                    {(gmailEmails.length === 0 && outlookEmails.length === 0) ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
                           <Mail className="w-8 h-8 text-blue-400" />
