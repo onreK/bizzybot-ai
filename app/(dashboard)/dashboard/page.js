@@ -441,42 +441,62 @@ export default function MainDashboard() {
         </div>
       )}
 
-      {/* Today at a Glance */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Conversations today", value: todayData.conversations, color: "text-green-400" },
-          { label: "Leads today", value: todayData.leads, color: "text-blue-400" },
-          { label: "Hot leads today", value: todayData.hotLeads, color: "text-red-400" },
-          { label: "Avg response time", value: dashboardData.analytics?.avgResponseTime ? `${dashboardData.analytics.avgResponseTime}m` : '—', color: "text-violet-400", isText: true },
-        ].map(({ label, value, color, isText }) => (
-          <div key={label} className="bg-[#161B22] rounded-xl border border-gray-800 px-4 py-3 flex items-center gap-3">
-            <div className={`text-xl font-bold ${color}`}>{isText ? value : (value ?? 0)}</div>
-            <div className="text-xs text-gray-500 leading-tight">{label}</div>
-          </div>
-        ))}
+      {/* Today — what's happening right now */}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-white">Today</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Conversations", value: todayData.conversations, color: "text-green-400" },
+            { label: "Leads", value: todayData.leads, color: "text-blue-400" },
+            { label: "Hot leads", value: todayData.hotLeads, color: "text-red-400" },
+            { label: "Phone requests", value: dashboardData.analytics?.phoneRequestsToday, color: "text-violet-400" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-[#161B22] rounded-xl border border-gray-800 px-4 py-3 flex items-center gap-3">
+              <div className={`text-xl font-bold ${color}`}>{value ?? 0}</div>
+              <div className="text-xs text-gray-500 leading-tight">{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Top Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={Users} title="Total Leads" value={dashboardData.analytics?.leadsCapture || dashboardData.combined.totalLeads} subtitle="All channels" color="blue" />
-        <StatCard icon={MessageCircle} title="Conversations" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalConversations} subtitle="All channels" color="green" />
-        <StatCard icon={Activity} title="Total Messages" value={dashboardData.combined.totalMessages} subtitle="Across all channels" color="purple" />
-        <StatCard icon={Target} title="Hot Leads (24h)" value={dashboardData.analytics?.hotLeadsToday || dashboardData.combined.hotLeadsToday} subtitle="High intent" color="orange" />
-        {/* AI Automation Rate */}
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 p-5 bg-[#161B22]">
-          <div className="flex items-start justify-between">
-            <div className="p-2 rounded-lg bg-white/5">
-              <Bot className="w-5 h-5 text-violet-400" />
+      {/* This month — each fact appears exactly once */}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-white">This Month</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard icon={MessageCircle} title="Conversations" value={dashboardData.analytics?.totalInteractions || dashboardData.combined.totalConversations} subtitle="All channels" color="green" />
+          <StatCard icon={Users} title="Leads Captured" value={dashboardData.analytics?.leadsCapture || dashboardData.combined.totalLeads} subtitle="With contact info" color="blue" />
+          <StatCard icon={Target} title="Appointments" value={dashboardData.analytics?.appointmentsScheduled} subtitle="Booked by AI" color="orange" />
+          {/* Avg response time */}
+          <div className="relative overflow-hidden rounded-xl border border-gray-800 p-5 bg-[#161B22]">
+            <div className="flex items-start justify-between">
+              <div className="p-2 rounded-lg bg-white/5">
+                <Clock className="w-5 h-5 text-cyan-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-bold text-white">
+                {dashboardData.analytics?.avgResponseTime ? `${dashboardData.analytics.avgResponseTime}m` : '—'}
+              </p>
+              <p className="text-sm text-gray-400 mt-0.5">Avg Response Time</p>
+              <p className="text-xs text-gray-600 mt-1">Across all channels</p>
             </div>
           </div>
-          <div className="mt-4">
-            <p className="text-2xl font-bold text-white">{(dashboardData.analytics?.aiEngagementRate || 0).toFixed(1)}%</p>
-            <p className="text-sm text-gray-400 mt-0.5">AI Automation Rate</p>
-            <div className="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-violet-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(dashboardData.analytics?.aiEngagementRate || 0, 100)}%` }}
-              />
+          {/* AI Automation Rate */}
+          <div className="relative overflow-hidden rounded-xl border border-gray-800 p-5 bg-[#161B22]">
+            <div className="flex items-start justify-between">
+              <div className="p-2 rounded-lg bg-white/5">
+                <Bot className="w-5 h-5 text-violet-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-bold text-white">{(dashboardData.analytics?.aiEngagementRate || 0).toFixed(1)}%</p>
+              <p className="text-sm text-gray-400 mt-0.5">AI Automation Rate</p>
+              <div className="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(dashboardData.analytics?.aiEngagementRate || 0, 100)}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -547,46 +567,8 @@ export default function MainDashboard() {
         </div>
       </div>
 
-      {/* AI Performance + Lead Management */}
+      {/* Lead Pipeline + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* AI Performance */}
-        <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-lg bg-violet-500/10">
-              <Activity className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">AI Performance</h3>
-              <p className="text-xs text-gray-500">Real AI behaviors across all channels</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <div className="bg-[#0D1117] rounded-lg p-4">
-              <div className="text-2xl font-bold text-green-400">{dashboardData.analytics?.phoneRequestsToday || 0}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Phone Requests Today</div>
-            </div>
-            <div className="bg-[#0D1117] rounded-lg p-4">
-              <div className="text-2xl font-bold text-orange-400">{dashboardData.analytics?.hotLeadsMonth || 0}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Hot Leads This Month</div>
-            </div>
-            <div className="bg-[#0D1117] rounded-lg p-4">
-              <div className="text-2xl font-bold text-blue-400">{dashboardData.analytics?.appointmentsScheduled || 0}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Appointments Scheduled</div>
-            </div>
-            <div className="bg-[#0D1117] rounded-lg p-4">
-              <div className="text-2xl font-bold text-violet-400">{dashboardData.analytics?.aiEngagementRate?.toFixed(1) || 0}%</div>
-              <div className="text-xs text-gray-500 mt-0.5">AI Engagement Rate</div>
-            </div>
-            <div className="bg-[#0D1117] rounded-lg p-4 col-span-2 flex items-center gap-3">
-              <Clock className="w-5 h-5 text-cyan-400 flex-shrink-0" />
-              <div>
-                <div className="text-2xl font-bold text-cyan-400">{dashboardData.analytics?.avgResponseTime ?? '—'}<span className="text-sm font-normal text-gray-500 ml-1">min</span></div>
-                <div className="text-xs text-gray-500">Avg AI Response Time</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Lead Pipeline Funnel */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
@@ -647,34 +629,6 @@ export default function MainDashboard() {
             );
           })()}
         </div>
-      </div>
-
-      {/* Trend Chart + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Hot Leads Trend */}
-        <div className="lg:col-span-2 bg-[#161B22] rounded-xl border border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-violet-500/10">
-                <Zap className="w-5 h-5 text-violet-400" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-white">Hot Leads Trend</h3>
-                <p className="text-xs text-gray-500">Last 7 days across all channels</p>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push('/analytics')}
-              className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
-            >
-              Full report <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="h-36">
-            <TrendChart data={dailyTrend} />
-          </div>
-        </div>
 
         {/* Recent Activity */}
         <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
@@ -726,6 +680,30 @@ export default function MainDashboard() {
           >
             View all leads →
           </button>
+        </div>
+      </div>
+
+      {/* Hot Leads Trend — full width */}
+      <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-violet-500/10">
+              <Zap className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white">Hot Leads Trend</h3>
+              <p className="text-xs text-gray-500">Last 7 days across all channels</p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/analytics')}
+            className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
+          >
+            Full report <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+        <div className="h-36">
+          <TrendChart data={dailyTrend} />
         </div>
       </div>
 
