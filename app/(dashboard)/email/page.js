@@ -1312,7 +1312,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-blue-500/20 text-blue-300'
                       }`}>
-                        {gmailEmails.length + outlookEmails.length}
+                        {gmailEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'inbox' && (
@@ -1336,7 +1336,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-green-500/20 text-green-300'
                       }`}>
-                        {sentEmails.length}
+                        {sentEmails.length + outlookEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'sent' && (
@@ -1413,7 +1413,7 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {(gmailEmails.length === 0 && outlookEmails.length === 0) ? (
+                    {gmailEmails.length === 0 ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
                           <Mail className="w-8 h-8 text-blue-400" />
@@ -1444,7 +1444,6 @@ export default function CompleteEmailSystem() {
                       <div className="space-y-0">
                         {[
                           ...gmailEmails.map(e => ({ ...e, source: 'gmail' })),
-                          ...outlookEmails,
                         ]
                           .sort((a, b) => new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0))
                           .map((email, index) => {
@@ -1540,7 +1539,7 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {sentEmails.length === 0 ? (
+                    {(sentEmails.length === 0 && outlookEmails.length === 0) ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
                           <Send className="w-8 h-8 text-green-400" />
@@ -1598,6 +1597,37 @@ export default function CompleteEmailSystem() {
                               <div className="text-xs text-gray-500">
                                 to {sentEmail.to.split('@')[1] || 'unknown'}
                               </div>
+                            </div>
+                          </div>
+                        ))}
+                        {outlookEmails.map((email) => (
+                          <div
+                            key={email.id}
+                            className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-all duration-200 ${
+                              selectedOutlookEmail?.id === email.id ? 'bg-green-500/20 border-l-4 border-l-green-400 shadow-lg' : ''
+                            }`}
+                            onClick={() => {
+                              setSelectedGmailEmail(null);
+                              setSelectedConversation(null);
+                              setSelectedOutlookEmail(email);
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-sm text-white truncate flex-1 mr-2">
+                                To: {email.fromName || email.fromEmail}
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                <div className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium">Outlook</div>
+                                <div className="px-2 py-1 rounded-full bg-green-500/20 text-green-300 text-xs font-medium">Sent</div>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-300 mb-1 truncate">Re: {email.subject}</p>
+                            <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
+                              {(email.aiReply || '').substring(0, 100)}...
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-500">{email.receivedTime}</p>
+                              <div className="text-xs text-gray-500">to {email.fromEmail?.split('@')[1] || 'unknown'}</div>
                             </div>
                           </div>
                         ))}
