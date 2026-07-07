@@ -540,12 +540,15 @@ export default function MainDashboard() {
             </div>
             <div className="mt-4">
               {(() => {
-                const mins = (dashboardData.analytics?.aiResponses || 0) * 3;
+                // Text/email replies ≈ 3 min each; voice calls count their
+                // actual minutes — the AI was literally on the phone that long.
+                const mins = (dashboardData.analytics?.aiResponses || 0) * 3
+                  + (dashboardData.voice?.minutesUsed || 0);
                 const label = mins >= 60 ? `${(mins / 60).toFixed(1)} hrs` : `${mins}m`;
                 return <p className="text-2xl font-bold text-white">{label}</p>;
               })()}
               <p className="text-sm text-gray-400 mt-0.5">Time Saved</p>
-              <p className="text-xs text-gray-600 mt-1">~3 min per AI reply</p>
+              <p className="text-xs text-gray-600 mt-1">~3 min per reply + voice minutes</p>
             </div>
           </div>
         </div>
