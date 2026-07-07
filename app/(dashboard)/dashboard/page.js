@@ -260,8 +260,8 @@ export default function MainDashboard() {
       leads: dashboardData.sms.leadsGenerated,
     },
     {
-      id: 'webchat', name: 'Web Chat', icon: MessageCircle, iconColor: 'text-violet-400', iconBg: 'bg-violet-500/10 border-violet-500/20',
-      href: '/demo', setupHref: '/demo',
+      id: 'webchat', name: 'Web Chat', icon: MessageCircle, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+      href: '/web-chat', setupHref: '/web-chat',
       connected: dashboardData.webChat.aiStatus === 'connected',
       conversations: dashboardData.webChat.totalConversations,
       leads: dashboardData.webChat.leadsGenerated,
@@ -287,9 +287,14 @@ export default function MainDashboard() {
 
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Overview</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Welcome back, {user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'there'}</p>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-violet-500/10 border border-violet-500/20 rounded-lg flex items-center justify-center">
+            <Bot className="w-5 h-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Overview</h1>
+            <p className="text-sm text-gray-500">Welcome back, {user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'there'}</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
@@ -297,11 +302,11 @@ export default function MainDashboard() {
               const emailConnected = !!dashboardData.email.emailSettings?.email;
               const anyConnected = emailConnected || dashboardData.webChat.aiStatus === 'connected';
               if (anyConnected) return <>
-                <div className="w-2 h-2 rounded-full bg-green-400" />
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="text-gray-400">AI Active</span>
               </>;
               return <>
-                <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
                 <span className="text-gray-400">AI Ready</span>
               </>;
             })()}
@@ -373,7 +378,7 @@ export default function MainDashboard() {
           { label: "Conversations today", value: todayData.conversations, color: "text-green-400" },
           { label: "Leads today", value: todayData.leads, color: "text-blue-400" },
           { label: "Hot leads today", value: todayData.hotLeads, color: "text-red-400" },
-          { label: "Avg response time", value: `${dashboardData.analytics?.avgResponseTime || 2}m`, color: "text-violet-400", isText: true },
+          { label: "Avg response time", value: dashboardData.analytics?.avgResponseTime ? `${dashboardData.analytics.avgResponseTime}m` : '—', color: "text-violet-400", isText: true },
         ].map(({ label, value, color, isText }) => (
           <div key={label} className="bg-[#161B22] rounded-xl border border-gray-800 px-4 py-3 flex items-center gap-3">
             <div className={`text-xl font-bold ${color}`}>{isText ? value : (value ?? 0)}</div>
@@ -507,7 +512,7 @@ export default function MainDashboard() {
             <div className="bg-[#0D1117] rounded-lg p-4 col-span-2 flex items-center gap-3">
               <Clock className="w-5 h-5 text-cyan-400 flex-shrink-0" />
               <div>
-                <div className="text-2xl font-bold text-cyan-400">{dashboardData.analytics?.avgResponseTime || 2}<span className="text-sm font-normal text-gray-500 ml-1">min</span></div>
+                <div className="text-2xl font-bold text-cyan-400">{dashboardData.analytics?.avgResponseTime ?? '—'}<span className="text-sm font-normal text-gray-500 ml-1">min</span></div>
                 <div className="text-xs text-gray-500">Avg AI Response Time</div>
               </div>
             </div>
