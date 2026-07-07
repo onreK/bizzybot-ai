@@ -187,7 +187,15 @@ async function processAccount(conn) {
         conversationHistory: history,
       });
 
-      if (!aiResult?.success || !aiResult?.response) continue;
+      if (!aiResult?.success || !aiResult?.response) {
+        diag.skippedNoAi = (diag.skippedNoAi || 0) + 1;
+        diag.aiInfo = {
+          success: aiResult?.success ?? null,
+          hasResponse: !!aiResult?.response,
+          error: aiResult?.error || aiResult?.metadata?.error || null,
+        };
+        continue;
+      }
 
       // Send reply
       await sendReply(accessToken, msg.id, aiResult.response);
@@ -263,6 +271,8 @@ async function processAccount(conn) {
       console.log(`✅ Outlook replied to ${fromEmail} for ${customer.clerk_user_id}`);
 
     } catch (err) {
+      diag.errors = diag.errors || [];
+      diag.errors.push(err.message);
       console.error(`❌ Outlook message error (${msg.id}):`, err.message);
     }
   }
