@@ -271,21 +271,43 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 **Call forwarding (built 2026-07-07 — needs live test):**
 5b. [ ] On `/voice` → Call Handling: set cell **858-900-4220**, mode "Ring my phone first", ~18s, Save. Then call (866) 944-5685: (a) answer → confirm connected; (b) let it ring out → AI picks up + **email** missed-lead alert arrives. Missed-call **text** won't deliver until the toll-free is SMS-verified (item 5).
 
-**Bugs noticed but not yet fixed (console errors on /email dashboard):**
-6. [ ] `api/chat?action=conversations` → 405, `api/chat?action=test-connection` → 405
-7. [ ] `api/sms/conversations` → 500
-8. [ ] `api/social/facebook/stats` → 404, `api/social/instagram/stats` → 404
-   (These are dashboard widget endpoints failing — investigate/clean up.)
+**Console errors — ALL FIXED 2026-07-07 evening:**
+6. [x] chat 405s → /api/chat now has a GET handler (conversations + test-connection)
+7. [x] sms/conversations 500 → rewritten (see SMS persistence in session log)
+8. [x] social stats 404s → Overview now calls the real /api/{facebook,instagram}/status+stats
+
+**Mobile check (built 2026-07-07 — needs a real-phone test):**
+8b. [ ] Open bizzybotai.com/dashboard on an actual phone: hamburger opens/closes the sidebar drawer, pages navigate, bell works. Check the **Email page** especially (split inbox is the tightest fit on small screens; may need a mobile-specific pass before launch).
 
 **Then resume launch checklist:**
-9. [ ] Item 6 — trades-first landing page (needs decision: trades-hard vs broad-local copy)
+9. [ ] Item 6 — landing page pass (multi-industry: broad hero + industries section w/ per-vertical pain-lines; replace fabricated claims; add Voice AI to hero)
 10. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
 
-**Nice-to-have:** "Check now" button for Outlook (currently console/hourly-cron triggered).
+**Nice-to-haves:**
+- "Check now" button for Outlook (currently console/hourly-cron triggered)
+- Sidebar plan/usage card ("Starter · 112/300 responses · Upgrade") pinned above Sign Out (~30 min incl. usage endpoint)
+- Audit which channels log to ai_analytics_events — Voice + new SMS persistence may not, which would understate the new "Time Saved" stat and Today/Month rows on Overview
+- Mobile padding polish (pages use p-8 everywhere; p-4 on phones would breathe better)
 
 ---
 
 ## Session Log
+
+### Session — 2026-07-07 (evening)
+**Design system unification · Overview overhaul (3 phases) · mobile support · SMS persistence**
+
+- **Design audit + unification.** Full audit of every channel page vs competitors (Podium/GHL/Rosie). Verdict: 3 design generations coexisting; **Voice AI page frozen as the design standard** (icon-box header → status cards → attention banner → settings card → activity lists; violet for interactive elements, channel identity color only in header icon/tags). Applied standard headers + flat stat cards to Email (cyan), Facebook (blue), Instagram (pink), Web Chat (emerald), Scheduling (violet). SMS page fully rebuilt earlier today to match Voice (blue, no tabs). Email kept its tabbed split-inbox layout deliberately (founder finds it intuitive — restyle only, commit `084f51e` if revert ever wanted).
+- **Fabricated metrics purged** (important for "built to sell"): hardcoded +23%/+15% Overview trends, FB/IG "< 1 sec" response speed (API + UI, now dash until real activity), TWO hardcoated "2 min avg response time" fallbacks. Landing page's fake "500+ businesses"/testimonials still pending (launch item 6).
+- **Landing page demo links were 404ing** — all 4 pointed to /amanda (deleted 07-06); now /demo.
+- **Web Chat page: live test chat embedded** — two-column layout: setup left, working chat right (talks to real /api/chat + customer AI settings, suggested prompts, hot-lead callout). No more bouncing to /demo.
+- **Dashboard is now mobile-friendly** — sidebar was a fixed 240px column (broken on phones); now an off-canvas drawer below md with a mobile top bar (hamburger + logo + bell), backdrop, auto-close on nav. Notification panel full-width on phones. Sidebar nav rows enlarged (15px/py-2.5/18px icons).
+- **🔑 SMS conversations now persist.** Discovered the SMS webhook stored conversations in an **in-memory Map** — wiped every deploy, nothing ever reached the DB. Webhook now writes each exchange to the shared `conversations`(type='sms', new `contact_phone` col)/`messages` tables; `/api/sms/conversations` rewritten to read them (was 500ing importing nonexistent lib functions). Only NEW conversations persist (old ones were never saved).
+- **Overview page overhaul, 3 phases (each own commit):**
+  - **P1 truth (`a67ad30`):** FB/IG cards called nonexistent /api/social/* (404 → always "Not connected"); now real status+stats endpoints. /api/chat GET added (was 405 → Web Chat always "Not set up"). **Voice AI added as 6th channel card** (calls + minutes; was completely absent) + counted in AI Active dot. SMS connected via /api/sms/provision; email connected now counts **Outlook** (was Gmail-only). Conversations/Messages cards no longer show the same aliased number. Polling cut from 12 requests/30s to notifications-only/60s + manual Refresh.
+  - **P2 clarity (`73bc7a4`):** 3 overlapping stat sections → two labeled rows: **Today** (conversations/leads/hot leads/phone requests) + **This Month** (conversations/leads/appointments/avg response/…); AI Performance card removed; every fact appears exactly once.
+  - **P3 priority (`490cf35`):** **"Needs Attention"** hot-leads grid now sits at the top (before all stats; collapses to a one-line all-clear when empty). **AI Automation Rate swapped for "Time Saved"** (AI replies × ~3 min, hrs past 60m; analytics service now exposes `ai_responses_month`). Pipeline + Trend pair at the bottom.
+- **Positioning REVISED:** founder does not want trades-only pigeonholing — broad multi-industry hero + industries section (see Launch Plan).
+- **Security:** Twilio signature verification added to /api/voice/* (fails closed, 403). `lib/twilio-verify.js` reusable — /api/sms/webhook still pending (Security cleanup backlog).
 
 ### Session — 2026-07-07 (continued)
 **Call forwarding (ring owner first → AI backup) + voice webhook security**
