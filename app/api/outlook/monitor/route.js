@@ -112,7 +112,12 @@ async function alreadyProcessed(messageId) {
 }
 
 async function processAccount(conn) {
-  let processed = 0;
+  const diag = {
+    processed: 0, fetched: 0, customerFound: false,
+    connectedEmail: conn.outlook_email,
+    skippedSelf: 0, skippedProcessed: 0, skippedAutomated: 0,
+    senders: [],
+  };
 
   const accessToken = await refreshTokenIfNeeded(conn);
 
@@ -124,34 +129,38 @@ async function processAccount(conn) {
 
   const data = await graphGet(accessToken, path);
   const messages = data.value || [];
+  diag.fetched = messages.length;
 
   // Get customer info
   const customerResult = await query(
     `SELECT c.id, c.clerk_user_id, c.business_name
      FROM outlook_connections oc
-     JOIN customers c ON c.clerk_user_id = oc.user_id
+     JOIN customers c ON c.clerk_user_id::text = oc.user_id::text
      WHERE oc.outlook_email = $1 LIMIT 1`,
     [conn.outlook_email]
   ).catch(() => ({ rows: [] }));
 
   const customer = customerResult.rows[0];
-  if (!customer) return processed;
+  if (!customer) return diag;
+  diag.customerFound = true;
 
   for (const msg of messages) {
     try {
-      if (await alreadyProcessed(msg.id)) continue;
-
       const fromEmail = msg.from?.emailAddress?.address || '';
       const fromName = msg.from?.emailAddress?.name || '';
+      diag.senders.push(fromEmail);
+
+      if (await alreadyProcessed(msg.id)) { diag.skippedProcessed++; continue; }
 
       // Skip emails sent to yourself (own replies)
-      if (fromEmail.toLowerCase() === conn.outlook_email.toLowerCase()) continue;
+      if (fromEmail.toLowerCase() === conn.outlook_email.toLowerCase()) { diag.skippedSelf++; continue; }
 
       // Filter out automated senders
       const bodyText = msg.body?.content?.replace(/<[^>]*>/g, ' ').trim() || '';
       const filterResult = await checkEmailFilter(fromEmail, msg.subject || '', bodyText);
       if (filterResult?.skip) {
         console.log(`⏭️ Outlook skipping automated email from ${fromEmail}`);
+        diag.skippedAutomated++;
         continue;
       }
 
@@ -250,7 +259,7 @@ async function processAccount(conn) {
         });
       }
 
-      processed++;
+      diag.processed++;
       console.log(`✅ Outlook replied to ${fromEmail} for ${customer.clerk_user_id}`);
 
     } catch (err) {
@@ -263,7 +272,7 @@ async function processAccount(conn) {
     [conn.outlook_email]
   ).catch(() => {});
 
-  return processed;
+  return diag;
 }
 
 export async function POST(request) {
@@ -296,8 +305,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'No connected Outlook account found' }, { status: 404 });
     }
 
-    const processed = await processAccount(connectionRow);
-    return NextResponse.json({ success: true, totalProcessed: processed });
+    const diag = await processAccount(connectionRow);
+    return NextResponse.json({ success: true, totalProcessed: diag.processed, diagnostics: diag });
 
   } catch (error) {
     console.error('❌ Outlook monitor error:', error);
