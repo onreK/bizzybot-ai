@@ -297,21 +297,21 @@ export default function CustomerSMSDashboard() {
           <div className="space-y-6">
             {/* SMS Configuration Status */}
             <div className="bg-[#161B22] rounded-xl border border-gray-800 p-6">
-              <h2 className="text-lg font-semibold mb-4">⚙️ SMS AI Configuration</h2>
+              <h2 className="text-lg font-semibold mb-4 text-white">⚙️ SMS AI Configuration</h2>
               {dashboardData.smsConfig ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="font-medium">📱 SMS Number:</span>
-                      <span className="font-mono">{formatPhoneNumber(dashboardData.smsConfig.phoneNumber)}</span>
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-sm font-medium text-gray-400">📱 SMS Number</span>
+                      <span className="font-mono text-sm text-white">{formatPhoneNumber(dashboardData.smsConfig.phoneNumber)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">🏢 Business:</span>
-                      <span>{dashboardData.smsConfig.businessName}</span>
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-sm font-medium text-gray-400">🏢 Business</span>
+                      <span className="text-sm text-white">{dashboardData.smsConfig.businessName}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">📶 Status:</span>
-                      <span className={dashboardData.smsConfig.verified ? 'text-green-500' : 'text-yellow-500'}>
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-sm font-medium text-gray-400">📶 Status</span>
+                      <span className={`text-sm font-medium ${dashboardData.smsConfig.verified ? 'text-green-400' : 'text-yellow-400'}`}>
                         {dashboardData.smsConfig.verified
                           ? '✅ Active — texting live'
                           : dashboardData.smsConfig.verificationStatus === 'needs_info'
@@ -320,7 +320,7 @@ export default function CustomerSMSDashboard() {
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  <div className="md:border-l md:border-gray-800 md:pl-6">
                     <p className="text-sm text-gray-400 leading-relaxed">
                       {dashboardData.smsConfig.verified
                         ? 'Your AI is answering texts on this number 24/7. Put it on your website, Google listing, ads, and signage so leads can reach you.'
@@ -386,10 +386,10 @@ export default function CustomerSMSDashboard() {
 
                 <button
                   onClick={toggleBusinessHours}
-                  className={`p-4 rounded-lg border ${
+                  className={`p-4 rounded-lg border transition-colors ${
                     dashboardData.smsConfig?.alertBusinessHours
                       ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-                      : 'bg-gray-50 border-gray-200 text-gray-200'
+                      : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
                   }`}
                 >
                   <div className="text-xl mb-2">🕐</div>
