@@ -184,11 +184,11 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
+        <nav className="flex-1 px-3 py-5 overflow-y-auto space-y-1">
           {NAV.map((section, si) => (
-            <div key={si} className={si > 0 ? 'pt-4' : ''}>
+            <div key={si} className={si > 0 ? 'pt-5' : ''}>
               {section.group && (
-                <p className="px-3 pb-1.5 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
+                <p className="px-3 pb-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
                   {section.group}
                 </p>
               )}
@@ -199,7 +199,7 @@ export default function DashboardLayout({ children }) {
                   <Link
                     key={`${item.href}-${item.label}`}
                     href={item.href}
-                    className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
+                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] transition-all group ${
                       isActive
                         ? 'text-white bg-violet-500/10'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -208,7 +208,7 @@ export default function DashboardLayout({ children }) {
                     {isActive && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-violet-500 rounded-r-full" />
                     )}
-                    <item.icon className={`w-4 h-4 flex-shrink-0 ${
+                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${
                       isActive ? 'text-violet-400' : 'text-gray-500 group-hover:text-gray-300'
                     }`} />
                     <span>{item.label}</span>
