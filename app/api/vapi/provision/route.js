@@ -1,13 +1,46 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import twilio from 'twilio';
 import { query } from '@/lib/database.js';
 import { createAssistant, updateAssistant, registerTwilioNumber, buildVoiceSystemPrompt } from '@/lib/vapi.js';
 
 export const dynamic = 'force-dynamic';
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://bizzybotai.com';
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+
+// Capture Vapi's inbound handler URL, then take over the number's Voice URL so
+// we can ring the owner first. Only takes over if we know where the AI lives,
+// so a failure never breaks AI answering. Idempotent.
+async function ensureVoiceRouting(twilioSid, phoneRowId, existingVapiUrl) {
+  if (!twilioClient || !twilioSid) return;
+  try {
+    const incomingUrl = `${BASE_URL}/api/voice/incoming`;
+    const current = await twilioClient.incomingPhoneNumbers(twilioSid).fetch();
+    const currentUrl = current.voiceUrl || '';
+    let vapiUrl = existingVapiUrl;
+    if (!vapiUrl && currentUrl && !currentUrl.includes('/api/voice/incoming')) {
+      vapiUrl = currentUrl;
+      await query(`UPDATE customer_phone_numbers SET vapi_voice_url = $1 WHERE id = $2`, [vapiUrl, phoneRowId]).catch(() => {});
+    }
+    if (vapiUrl && currentUrl !== incomingUrl) {
+      await twilioClient.incomingPhoneNumbers(twilioSid).update({ voiceUrl: incomingUrl, voiceMethod: 'POST' });
+      console.log(`📞 Voice routing set to BizzyBot for ${twilioSid}`);
+    }
+  } catch (e) {
+    console.error('⚠️ ensureVoiceRouting failed:', e.message);
+  }
+}
+
 async function ensureVapiSchema() {
   await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS vapi_assistant_id TEXT`).catch(() => {});
   await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS vapi_phone_number_id TEXT`).catch(() => {});
+  await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS vapi_voice_url TEXT`).catch(() => {});
+  await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS forward_cell TEXT`).catch(() => {});
+  await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS call_mode TEXT DEFAULT 'human_first'`).catch(() => {});
+  await query(`ALTER TABLE customer_phone_numbers ADD COLUMN IF NOT EXISTS ring_seconds INTEGER DEFAULT 18`).catch(() => {});
   await query(`
     CREATE TABLE IF NOT EXISTS vapi_call_logs (
       id SERIAL PRIMARY KEY,
@@ -55,7 +88,8 @@ export async function POST(request) {
     // Key on the phone-number row (clerk_user_id is reliably set there) and
     // resolve customer_id resiliently (legacy user_id/clerk_user_id split).
     const numberResult = await query(
-      `SELECT cpn.id, cpn.phone_number, cpn.vapi_assistant_id, cpn.vapi_phone_number_id,
+      `SELECT cpn.id, cpn.phone_number, cpn.twilio_sid, cpn.vapi_assistant_id,
+              cpn.vapi_phone_number_id, cpn.vapi_voice_url,
               COALESCE(cpn.customer_id, c.id) AS customer_id
        FROM customer_phone_numbers cpn
        LEFT JOIN customers c ON (c.clerk_user_id::text = $1 OR c.user_id::text = $1)
@@ -71,6 +105,8 @@ export async function POST(request) {
     const row = numberResult.rows[0];
 
     if (row.vapi_assistant_id && row.vapi_phone_number_id) {
+      // Already has an assistant — make sure the owner-first voice routing is in place.
+      await ensureVoiceRouting(row.twilio_sid, row.id, row.vapi_voice_url);
       return NextResponse.json({ success: true, assistantId: row.vapi_assistant_id, alreadyProvisioned: true });
     }
 
@@ -87,6 +123,9 @@ export async function POST(request) {
        WHERE id = $3`,
       [assistant.id, vapiNumber.id, row.id]
     );
+
+    // Take over voice routing so we can ring the owner's cell first.
+    await ensureVoiceRouting(row.twilio_sid, row.id, null);
 
     console.log(`✅ Vapi provisioned for ${userId}: assistant=${assistant.id}`);
     return NextResponse.json({ success: true, assistantId: assistant.id });

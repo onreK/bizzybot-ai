@@ -91,6 +91,30 @@ export default function VoicePage() {
   const [provisioning, setProvisioning] = useState(false);
   const [error, setError] = useState('');
 
+  // Call-handling settings (ring owner first vs AI first)
+  const [forwardCell, setForwardCell] = useState('');
+  const [callMode, setCallMode] = useState('human_first');
+  const [ringSeconds, setRingSeconds] = useState(18);
+  const [savingCall, setSavingCall] = useState(false);
+  const [callMsg, setCallMsg] = useState('');
+
+  async function saveCallSettings() {
+    setSavingCall(true);
+    setCallMsg('');
+    try {
+      const res = await fetch('/api/vapi/call-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forwardCell, callMode, ringSeconds }),
+      });
+      const data = await res.json();
+      setCallMsg(data.success ? '✓ Saved' : (data.error || 'Failed to save'));
+    } catch {
+      setCallMsg('Something went wrong');
+    }
+    setSavingCall(false);
+  }
+
   useEffect(() => {
     loadData();
   }, []);
@@ -104,6 +128,15 @@ export default function VoicePage() {
       ]);
       if (statusRes.ok) setStatus(await statusRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
+      try {
+        const csRes = await fetch('/api/vapi/call-settings');
+        if (csRes.ok) {
+          const cs = await csRes.json();
+          setForwardCell(cs.forwardCell || '');
+          setCallMode(cs.callMode || 'human_first');
+          setRingSeconds(cs.ringSeconds ?? 18);
+        }
+      } catch {}
     } catch {}
     setLoading(false);
   }
@@ -262,6 +295,75 @@ export default function VoicePage() {
               }).length}</p>
               <p className="text-gray-500 text-xs mt-1">All time: {calls.length}</p>
             </div>
+          </div>
+
+          {/* Call handling */}
+          <div className="bg-[#161B22] border border-gray-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-violet-400" />
+              <span className="text-white font-medium text-sm">Call Handling</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                onClick={() => setCallMode('human_first')}
+                className={`text-left p-4 rounded-lg border transition-colors ${
+                  callMode === 'human_first' ? 'bg-violet-500/10 border-violet-500/40' : 'bg-[#0D1117] border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                <p className="text-white text-sm font-medium">Ring my phone first</p>
+                <p className="text-gray-500 text-xs mt-1">Calls ring your cell; the AI answers only if you can't pick up.</p>
+              </button>
+              <button
+                onClick={() => setCallMode('ai_first')}
+                className={`text-left p-4 rounded-lg border transition-colors ${
+                  callMode === 'ai_first' ? 'bg-violet-500/10 border-violet-500/40' : 'bg-[#0D1117] border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                <p className="text-white text-sm font-medium">AI answers first</p>
+                <p className="text-gray-500 text-xs mt-1">The AI picks up every call immediately.</p>
+              </button>
+            </div>
+
+            {callMode === 'human_first' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Your cell phone (where calls forward)</label>
+                  <input
+                    type="tel"
+                    value={forwardCell}
+                    onChange={(e) => setForwardCell(e.target.value)}
+                    placeholder="(858) 555-0123"
+                    className="w-full bg-[#0D1117] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Ring for (seconds before AI takes over)</label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={45}
+                    value={ringSeconds}
+                    onChange={(e) => setRingSeconds(e.target.value)}
+                    className="w-full bg-[#0D1117] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={saveCallSettings}
+                disabled={savingCall}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {savingCall ? 'Saving…' : 'Save Call Settings'}
+              </button>
+              {callMsg && <span className="text-sm text-gray-400">{callMsg}</span>}
+            </div>
+            <p className="text-xs text-gray-600">
+              When you miss a forwarded call, the AI answers the caller and you get a text + email about the lead.
+            </p>
           </div>
 
           {/* Minutes usage */}

@@ -12,6 +12,7 @@ export default authMiddleware({
     "/api/webhooks/clerk",
     "/api/contact",
     "/api/sms/webhook",
+    "/api/voice/(.*)",               // Twilio voice routing (TwiML) — no Clerk session
     "/api/facebook/webhook",
     "/api/instagram/webhook",        // Instagram webhook (public)
     "/api/email/webhook",
