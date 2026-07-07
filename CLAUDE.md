@@ -238,7 +238,7 @@ BizzyBot gives businesses an AI agent that:
 - [~] **2. End-to-end SMS test with a real number** — SUBMISSION VERIFIED 2026-07-06: (866) 944-5685 provisioned + toll-free verification submitted to Twilio (confirmed by Twilio email + blue "being activated" screen). Full text-reply test pending carrier approval (3-5 biz days). Fixed en route: profile-save (legacy user_id/clerk_user_id type mismatch, business_profiles NOT-NULL user_id, ON CONFLICT, error-masking), TFV needs SDK-bypass direct API call (SDK 4.23 drops BusinessType), business type + EIN + contact name + state-code normalization
 - [x] **3. Vapi voice end-to-end test** — DONE + LIVE-VERIFIED 2026-07-06: called (866) 944-5685, AI answered + held real conversation, call logged with transcript + AI summary + duration + minutes (2/15) on /voice. Fixed en route: fragile customer JOIN in vapi/provision, invalid 11labs voice "rachel" → Vapi-native "Elliot" (VAPI_VOICE_* env), webhook parsing (Vapi nests fields under `message`; was reading top-level → no logs), stats match by customer_id OR clerk_user_id.
   - NOTE: voice AI used placeholder content ("Test Business", test.com) because this test account's ai_channel_settings has stale demo data. Real customers configure their own; update AI Settings → Voice → Save & Sync to refresh the assistant.
-- [ ] **4. Outlook email end-to-end test** — or disable for launch if broken
+- [~] **4. Email end-to-end (Gmail + Outlook)** — Outlook WORKING (2026-07-07): connect → AI reply → unified inbox → lead, verified live. Gmail bugs fixed (duplicate loop + placeholders + secure OAuth) 2026-07-07 — needs re-verify next session (reconnect Gmail, fresh test). See NEXT SESSION TODO.
 - [x] **5. Production cleanup + security pass** — DONE 2026-07-06: deleted 20 dev/debug/migration routes+pages (incl. fully-public setup-database and all DB-mutation tools), removed stale public routes, fixed contact-email demo link. DB audit run (admin-gated `/api/admin/db-audit`): NO duplicate customer rows, 0 null clerk_ids, healthy data. Healed 8 legacy rows where user_id != clerk_user_id → 0 mismatched. Customers table fully consistent.
 - [x] **5b. Gate number provisioning behind active subscription/trial** — DONE 2026-07-06: `/api/sms/provision` now checks `hasActiveAccess` (Stripe subscription present OR within 14-day trial from created_at) before buying a number; returns 402 needsSubscription otherwise. NOTE: gate treats presence of stripe_subscription_id as active (doesn't verify canceled status via Stripe — tighten later if needed).
 - [x] **Subscription route fixed** — DONE 2026-07-06: `/api/customer/subscription` had old price IDs + $99/$299/$799 + "enterprise" (missing "business"), which broke real checkout (upgrade to Business = "Invalid plan"; Starter/Pro checkout used dead price IDs). Now uses correct current price IDs + $29/$69/$199 + starter/professional/business, guarded against legacy plan values.
@@ -250,11 +250,52 @@ BizzyBot gives businesses an AI agent that:
 - [ ] Meta App Review (in progress) · Google OAuth verification (in progress)
 
 ### Post-launch backlog
-Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships)
+Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships) → near-real-time email replies (Gmail/Outlook push notifications instead of hourly cron)
+
+---
+
+## ☀️ NEXT SESSION TODO (start here — 2026-07-08)
+
+**Email channel — verify the fixes from 2026-07-07 (top priority):**
+1. [ ] **Reconnect the test Gmail (kernojunk)** via Connections tab — the old connection used the pre-secure-OAuth flow (broken/anonymous id). Reconnecting stores the correct account id so config loads via the primary path, not the fallback.
+2. [ ] Send a **fresh Gmail test email** → confirm: replies **exactly once** (no duplicate loop), uses **real business info** (not "My Business"), **no `[placeholders]`**.
+3. [ ] Send a **fresh Outlook test email** → confirm still replies once with correct info (Outlook was already good; the claim-then-send dedup is new).
+4. [ ] Confirm the unified email inbox shows both Gmail (red tag) + Outlook (blue tag) correctly.
+
+**SMS:**
+5. [ ] Check Twilio toll-free verification status for (866) 944-5685 (submitted 2026-07-06, ~3-5 biz days → likely ready ~07-09/07-11). Once "Verified," **text the number** to test SMS AI end-to-end. (SMS text AI uses the same OpenAI key as email — confirm it's funded.)
+
+**Bugs noticed but not yet fixed (console errors on /email dashboard):**
+6. [ ] `api/chat?action=conversations` → 405, `api/chat?action=test-connection` → 405
+7. [ ] `api/sms/conversations` → 500
+8. [ ] `api/social/facebook/stats` → 404, `api/social/instagram/stats` → 404
+   (These are dashboard widget endpoints failing — investigate/clean up.)
+
+**Then resume launch checklist:**
+9. [ ] Item 6 — trades-first landing page (needs decision: trades-hard vs broad-local copy)
+10. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
+
+**Nice-to-have:** "Check now" button for Outlook (currently console/hourly-cron triggered).
 
 ---
 
 ## Session Log
+
+### Session — 2026-07-07
+**Email channel deep hardening — Gmail + Outlook**
+
+- **Outlook email — got it fully working end-to-end (connect → receive → AI reply → log → lead → unified inbox):**
+  - Fixed OAuth: added `openid`/`profile` scopes (Microsoft AADSTS70011 was blocking connection *entirely* — Outlook was never actually connected before)
+  - Unified email inbox now shows Gmail (red tag) + Outlook (blue tag); empty-check/counters were Gmail-only and hid Outlook emails
+  - New user-triggered check: `/api/outlook/monitor` POST now accepts a logged-in session (not just cron) so customers/tests can check on demand
+  - Claim-then-send dedup (record message in `outlook_messages` before sending; skip if already claimed → impossible to double-reply)
+  - Diagnostics added to explain `totalProcessed: 0` (fetched/customerFound/skip counters/senders/aiInfo/errors)
+- **Gmail email — fixed two serious bugs:**
+  - **Duplicate-reply loop** (was sending 8+ replies to one email). ROOT CAUSE: `gmail.modify` scope was removed in commit 347810c ("not needed" — but it WAS the dedup: marking read stopped re-fetch). Without modify we can't mark read, so added DB dedup: new `gmail_responded` table, claim-before-send in `respondToEmail`, and filter answered ids out of the `is:unread` check. Do NOT re-add gmail.modify (triggers Google's $15k CASA audit).
+  - **Placeholder replies** (`[Your Name]`, "My Business"). Two causes fixed: (a) prompt — gmail channel said "sign off appropriately" → AI invented signatures; changed to "sign off as business name only" + added hard no-placeholders rule to `buildChannelSpecificPrompt`; (b) config not loading — `getCustomerAIConfiguration` only tried the (often broken) user id; added email fallback.
+  - **Secure Gmail OAuth** (like Outlook): initiation now reads the verified Clerk session + sets an httpOnly state cookie; callback verifies the cookie and stores the server-verified user id. Was defaulting to `'anonymous'` from a missing URL param → broken connections + account-linking security gap. Middleware runs Clerk on `/api/auth/google` (callback stays ignored).
+- **Key facts:** Gmail + Outlook share the `email` channel AI settings (CHANNEL_MAP maps `gmail`→`email`). New table: `gmail_responded`. Email replies currently run on the hourly cron OR manual trigger (no gmail.modify / no push yet).
+
 
 ### Session — 2026-07-05
 **Toll-free SMS pivot — on-demand numbers + auto-verification**
