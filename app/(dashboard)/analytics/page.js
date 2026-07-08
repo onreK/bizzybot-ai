@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
               <div className="bg-[#161B22] rounded-xl border border-gray-800 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-5 h-5 text-green-400" />
-                  <span className="text-sm text-gray-400">AI Engagement Rate</span>
+                  <span className="text-sm text-gray-400">AI Response Rate</span>
                 </div>
                 <div className="text-2xl font-bold text-white">
                   {analytics.overview?.ai_engagement_rate || 0}%

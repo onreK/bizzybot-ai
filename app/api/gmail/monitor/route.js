@@ -862,21 +862,36 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
           });
           if (contactResult.success) {
             contactId = contactResult.contact.id;
-            await trackLeadEventWithContact(
-              customerSettings.customer_id,
-              contactId,
-              {
-                type: 'email_received',
-                channel: 'gmail',
-                message: originalBody.substring(0, 500),
-                metadata: JSON.stringify({
-                  subject: subject,
-                  from: replyToEmail,
-                  gmail_message_id: emailId,
-                  thread_id: messageData.data.threadId
-                })
-              }
+            // Deduplicate: this path re-runs on every cron pass until the email
+            // is marked read, which historically logged the same message
+            // thousands of times (26k events for ~271 real emails)
+            const alreadyLogged = await query(
+              `SELECT id FROM ai_analytics_events
+               WHERE customer_id = $1
+                 AND event_type = 'email_received'
+                 AND metadata::text LIKE $2
+               LIMIT 1`,
+              [customerSettings.customer_id, `%${emailId}%`]
             );
+            if (alreadyLogged.rows.length === 0) {
+              await trackLeadEventWithContact(
+                customerSettings.customer_id,
+                contactId,
+                {
+                  type: 'email_received',
+                  channel: 'gmail',
+                  message: originalBody.substring(0, 500),
+                  metadata: JSON.stringify({
+                    subject: subject,
+                    from: replyToEmail,
+                    gmail_message_id: emailId,
+                    thread_id: messageData.data.threadId
+                  })
+                }
+              );
+            } else {
+              console.log(`⏭️ email_received already logged for ${emailId} — skipping duplicate`);
+            }
           }
         } catch (contactError) {
           console.error('❌ Failed to create/update contact:', contactError);
