@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { getAvailableSlots, createCalendarEvent } from '@/lib/microsoft-calendar.js';
+import { getAvailableSlots, createCalendarEvent, getWeekAgenda } from '@/lib/microsoft-calendar.js';
 import { query } from '@/lib/database.js';
 
 export const dynamic = 'force-dynamic';
 
-// GET — return available slots for the current customer
-export async function GET() {
+// GET — available slots (default) or the week's real events (?view=agenda)
+export async function GET(request) {
   try {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const view = new URL(request.url).searchParams.get('view');
+
+    if (view === 'agenda') {
+      const result = await getWeekAgenda(userId);
+      if (result.needsReconnect) {
+        return NextResponse.json({ needsReconnect: true, events: [] });
+      }
+      return NextResponse.json({ events: result.events, timezone: result.timezone || null, error: result.error || null });
+    }
 
     const result = await getAvailableSlots(userId);
 
@@ -17,7 +27,7 @@ export async function GET() {
       return NextResponse.json({ needsReconnect: true, slots: [] });
     }
 
-    return NextResponse.json({ slots: result.slots, error: result.error || null });
+    return NextResponse.json({ slots: result.slots, timezone: result.timezone || null, error: result.error || null });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
