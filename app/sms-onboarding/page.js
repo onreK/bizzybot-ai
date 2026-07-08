@@ -30,6 +30,7 @@ export default function SMSOnboarding() {
   const [ein, setEin] = useState('');
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
+  const [businessEmail, setBusinessEmail] = useState('');
 
   // True when a number already exists but still needs info — the form then
   // re-submits verification instead of buying another number.
@@ -99,6 +100,7 @@ export default function SMSOnboarding() {
           setEin(infoData.ein || '');
           setContactFirstName(infoData.contactFirstName || '');
           setContactLastName(infoData.contactLastName || '');
+          setBusinessEmail(infoData.businessEmail || '');
         }
       } catch { /* ignore */ }
 
@@ -161,6 +163,7 @@ export default function SMSOnboarding() {
           ein: ein.trim(),
           contactFirstName: contactFirstName.trim(),
           contactLastName: contactLastName.trim(),
+          businessEmail: businessEmail.trim(),
         }),
       });
       const infoData = await infoRes.json();
@@ -481,6 +484,22 @@ export default function SMSOnboarding() {
               </div>
               <p className="text-xs text-gray-400 mt-1">
                 The real person authorizing this on behalf of the business — not a nickname or username.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business email</label>
+              <input
+                type="email"
+                value={businessEmail}
+                onChange={(e) => setBusinessEmail(e.target.value)}
+                placeholder="you@yourbusiness.com"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Use an email on your business domain, or one that&apos;s listed on your website —
+                carriers check that they match. A personal email that appears nowhere on your
+                site is the #1 reason verifications get rejected.
               </p>
             </div>
 
