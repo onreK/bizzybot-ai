@@ -279,6 +279,12 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 **Mobile check (built 2026-07-07 — needs a real-phone test):**
 8b. [ ] Open bizzybotai.com/dashboard on an actual phone: hamburger opens/closes the sidebar drawer, pages navigate, bell works. Check the **Email page** especially (split inbox is the tightest fit on small screens; may need a mobile-specific pass before launch).
 
+**Deep-dive fixes (deployed 2026-07-07 — need live tests):**
+8c. [ ] **Web-chat widget embed** (rebuilt from scratch — never live-tested): drop `<script src="https://bizzybotai.com/api/widget/<clerk_user_id>/widget.js"></script>` into any plain HTML page (or the embed code from /web-chat), confirm: bubble renders → visitor gets AI replies → typing an email/phone creates a contact in Leads → conversation shows on the dashboard Web Chat list.
+8d. [ ] **Analytics page** on prod: numbers should now be believable (no 26k interactions); trend chart reads oldest→newest; Hot Leads/Phone Requests non-zero for the test account on "All Time".
+8e. [ ] **Outlook AI booking with correct timezone**: email the connected test account asking to schedule → AI should offer slots labeled ET ("2:00 PM EDT"), and after confirming, the calendar event should land at the right local time with an invite. Also verify the Appointments card ticks up (appointment_booked event).
+8f. [ ] When the SMS test happens (item 5), also confirm the texter shows up under **Leads** (SMS lead capture is new).
+
 **Then resume launch checklist:**
 9. [x] Item 6 — landing page pass DONE 2026-07-08 (`79137a8`): voice-first hero, 6-feature grid (Voice first + Scheduling), Industries section (trades/real estate/salons/clinics) replacing fake testimonials, founding-customer strip (BIZZYFOUNDER 50%/12mo) replacing "500+ businesses" + fake stats, FB/IG marked coming soon
 10. [x] **FINAL DEEP DIVE — DONE 2026-07-07** (`f2f94e1`, `e9cec16`, `a885187`, `29792fa`): all 4 subsystems audited against prod DB + fixed. See session log. Highlights: Analytics counted dead event names + 26k duplicate gmail rows (deleted, user-approved); SMS/web-chat never created leads (web-chat embed was fully broken for customer sites — rebuilt); Outlook AI booking had a UTC timezone bug offering 5am ET slots (fixed, business-local); document sends now tracked. **DECIDED 2026-07-07: Calendly stays link-only** (AI autosends booking_url; full OAuth integration only if founding customers ask — API can't book on invitee's behalf anyway, so max is one-tap prefilled confirm link).
@@ -287,8 +293,9 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 **Nice-to-haves:**
 - "Check now" button for Outlook (currently console/hourly-cron triggered)
 - Sidebar plan/usage card ("Starter · 112/300 responses · Upgrade") pinned above Sign Out (~30 min incl. usage endpoint)
-- Audit which channels log to ai_analytics_events — Voice + new SMS persistence may not, which would understate the new "Time Saved" stat and Today/Month rows on Overview
+- ~~Audit which channels log to ai_analytics_events~~ DONE 2026-07-07 in the deep dive — every channel now logs real inbound events
 - Mobile padding polish (pages use p-8 everywhere; p-4 on phones would breathe better)
+- "Apply to all channels" option for Documents in AI Settings (currently configured per channel)
 
 ---
 
