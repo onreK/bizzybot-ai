@@ -250,7 +250,7 @@ BizzyBot gives businesses an AI agent that:
 - [ ] Meta App Review (in progress) · Google OAuth verification (in progress)
 
 ### Post-launch backlog
-Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships) → near-real-time email replies (Gmail/Outlook push notifications instead of hourly cron)
+Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document receiving** (leads send filled forms/photos back — needs file storage e.g. Railway bucket + attachment extraction from Gmail/Outlook/MMS; founder flagged 2026-07-07 as valuable for inspectors/repair trades) → Hosted SMS onboarding path → click-to-call bridge (owner calls leads from business number) → referral tracking → 10DLC local numbers (only if customers demand local or outbound marketing ships) → near-real-time email replies (Gmail/Outlook push notifications instead of hourly cron)
 
 ### Security cleanup backlog
 - [ ] Add Twilio signature verification to `/api/sms/webhook` (reuse `lib/twilio-verify.js`, validate against `${BASE_URL}/api/sms/webhook`). Lower risk than the voice routes (no outbound alerts fired), so deferred from the 2026-07-07 voice security pass.
@@ -281,7 +281,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 
 **Then resume launch checklist:**
 9. [x] Item 6 — landing page pass DONE 2026-07-08 (`79137a8`): voice-first hero, 6-feature grid (Voice first + Scheduling), Industries section (trades/real estate/salons/clinics) replacing fake testimonials, founding-customer strip (BIZZYFOUNDER 50%/12mo) replacing "500+ businesses" + fake stats, FB/IG marked coming soon
-10. [x] **FINAL DEEP DIVE — DONE 2026-07-07** (`f2f94e1`, `e9cec16`, `a885187`, `29792fa`): all 4 subsystems audited against prod DB + fixed. See session log. Highlights: Analytics counted dead event names + 26k duplicate gmail rows (deleted, user-approved); SMS/web-chat never created leads (web-chat embed was fully broken for customer sites — rebuilt); Outlook AI booking had a UTC timezone bug offering 5am ET slots (fixed, business-local); document sends now tracked. **Remaining decision: Calendly full AI integration** (per-customer OAuth; API can't book on invitee's behalf — honest max is AI offers real times + one-tap prefilled confirm link).
+10. [x] **FINAL DEEP DIVE — DONE 2026-07-07** (`f2f94e1`, `e9cec16`, `a885187`, `29792fa`): all 4 subsystems audited against prod DB + fixed. See session log. Highlights: Analytics counted dead event names + 26k duplicate gmail rows (deleted, user-approved); SMS/web-chat never created leads (web-chat embed was fully broken for customer sites — rebuilt); Outlook AI booking had a UTC timezone bug offering 5am ET slots (fixed, business-local); document sends now tracked. **DECIDED 2026-07-07: Calendly stays link-only** (AI autosends booking_url; full OAuth integration only if founding customers ask — API can't book on invitee's behalf anyway, so max is one-tap prefilled confirm link).
 11. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
 
 **Nice-to-haves:**
