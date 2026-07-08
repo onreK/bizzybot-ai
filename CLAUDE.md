@@ -281,7 +281,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 
 **Then resume launch checklist:**
 9. [x] Item 6 — landing page pass DONE 2026-07-08 (`79137a8`): voice-first hero, 6-feature grid (Voice first + Scheduling), Industries section (trades/real estate/salons/clinics) replacing fake testimonials, founding-customer strip (BIZZYFOUNDER 50%/12mo) replacing "500+ businesses" + fake stats, FB/IG marked coming soon
-10. [ ] **FINAL DEEP DIVE (founder-requested, pre-launch):** audit 4 subsystems the way we audited Overview (truth → clarity → priority): **(a) Analytics page** (shares the ai_analytics_events skew — total_interactions counts regex-detected behaviors not real interactions; verify every card), **(b) Lead Management** (leads page + lead detail + contacts pipeline; do all channels create leads? SMS persistence is new), **(c) Calendar booking** (Outlook calendar AI booking end-to-end + [BOOK:] marker + scheduling link autosend), **(d) Documents/forms sending + receiving** (document link sending feature — what exists, does it work, is "receiving" even built?)
+10. [x] **FINAL DEEP DIVE — DONE 2026-07-07** (`f2f94e1`, `e9cec16`, `a885187`, `29792fa`): all 4 subsystems audited against prod DB + fixed. See session log. Highlights: Analytics counted dead event names + 26k duplicate gmail rows (deleted, user-approved); SMS/web-chat never created leads (web-chat embed was fully broken for customer sites — rebuilt); Outlook AI booking had a UTC timezone bug offering 5am ET slots (fixed, business-local); document sends now tracked. **Remaining decision: Calendly full AI integration** (per-customer OAuth; API can't book on invitee's behalf — honest max is AI offers real times + one-tap prefilled confirm link).
 11. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
 
 **Nice-to-haves:**
@@ -293,6 +293,15 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → Hosted SMS onbo
 ---
 
 ## Session Log
+
+### Session — 2026-07-07 (evening #2)
+**FINAL DEEP DIVE (Launch Checklist item 10) — all 4 subsystems audited against prod DB + fixed**
+
+- **(a) Analytics** (`f2f94e1`): prod audit found 26,203 of 26,284 events were duplicate gmail `email_received` rows (271 real emails — monitor re-logged unread mail every cron run), AND the page counted event names the tracker stopped writing in Aug 2025 (`hot_lead` vs `hot_lead_detected` etc.) so Hot Leads/Phone/Appointments froze at 0. Fixed: interactions = distinct real inbound; both name generations counted; gmail write-side dedup completed; trend chart was rendering backwards (fixed); `[BOOK:]` bookings now log `appointment_booked`. **Duplicate rows deleted from prod (user-approved): 26,203 → 271; whole events table now 352 rows.** Verified against prod: customer 863 all-time = 251 interactions, 9 hot, 5 phone, 2 appts.
+- **(b) Lead Management** (`e9cec16`): only Gmail/Outlook/Voice created contacts. SMS "lead captured" was a console.log (now real contact + event per texter). **Web-chat embed was fully broken for customer sites** (auth read empty in-memory `global.businesses`, chat POSTed to Clerk-authed endpoint = 401 for visitors, read wrong response field) — rebuilt: DB-backed widget auth w/ subscription gate, new public `/api/widget/[id]/chat` (CORS, per-session persistence, email/phone extraction → contact, hot-lead alerts). FB/IG DMs wired via new `captureInboundMessage` in leads-service. Outlook was NOT broken — contacts dedup by email, first-touch source wins.
+- **(c) Calendar** (`a885187`): Outlook AI booking loop (slots → AI offers → `[BOOK:]` → real event + invite) already existed BUT was all-UTC: ET businesses were offered 5am-local slots and leads were told UTC times. Fixed: business-local hours/display (`business_timezone` col, default America/New_York; `[SLOT:]` markers stay UTC). `[BOOK:]` now validated against offered slots; failed/invalid bookings correct the reply instead of leaving a false "you're booked!". Old `/api/calendly` route = dead single-tenant demo code (founder's token, hardcoded real-estate event names), nothing calls it.
+- **(d) Documents** (`29792fa`): per-channel config + AI link-sending works; sends now logged as `document_sent`. **Receiving is not built** (no uploads/attachment extraction) — feature decision deferred.
+- Known quirk (pre-existing, not fixed): "today" metrics use the DB's UTC day, so late-evening ET activity can count as tomorrow.
 
 ### Session — 2026-07-08 (late night addendum)
 **Landing page pass · Time Saved fix · cron incident + hardening**
