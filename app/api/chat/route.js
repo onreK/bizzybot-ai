@@ -56,11 +56,24 @@ export async function GET(req) {
         createdAt: r.created_at,
         messageCount: parseInt(r.message_count, 10) || 0,
       }));
+      // Real chat-sourced contacts (the widget captures emails/phones typed
+      // into the chat since 2026-07)
+      let leadsGenerated = 0;
+      try {
+        const leadsRes = await db.query(
+          `SELECT COUNT(*) AS n FROM contacts ct
+           JOIN customers cu ON cu.id = ct.customer_id
+           WHERE cu.clerk_user_id = $1 AND ct.source_channel = 'chat'`,
+          [userId]
+        );
+        leadsGenerated = parseInt(leadsRes.rows[0]?.n || 0);
+      } catch {}
+
       return NextResponse.json({
         conversations,
         totalConversations: conversations.length,
         totalMessages: conversations.reduce((acc, c) => acc + c.messageCount, 0),
-        leadsGenerated: 0, // chat doesn't capture contact info yet — don't fake it
+        leadsGenerated,
       });
     }
 

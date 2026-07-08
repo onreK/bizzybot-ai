@@ -4,6 +4,7 @@ import twilio from 'twilio';
 import { generateSMSResponse } from '../../../../lib/ai-service.js';
 import { query } from '../../../../lib/database.js';
 import { sendHotLeadAlert } from '../../../../lib/owner-alerts.js';
+import { trackLeadEvent } from '../../../../lib/leads-service.js';
 
 // Initialize Twilio
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -187,16 +188,28 @@ export async function POST(request) {
       });
     }
 
-    // Capture lead if not already captured
-    if (!conversation.leadCaptured) {
-      conversation.leadCaptured = true;
-      console.log('📝 New lead captured:', {
-        phone: fromNumber,
-        source: 'SMS',
-        firstMessage: messageBody,
-        hotLeadScore: aiResult.hotLead?.score || 0,
-        centralizedAI: true
-      });
+    // Capture lead — every texter becomes a contact, every message a real
+    // interaction event (this was previously just a console.log; SMS never
+    // created leads at all)
+    if (resolvedClerkUserId) {
+      try {
+        const custRes = await query(
+          'SELECT id FROM customers WHERE clerk_user_id = $1 LIMIT 1',
+          [resolvedClerkUserId]
+        );
+        const customerId = custRes.rows[0]?.id;
+        if (customerId) {
+          await trackLeadEvent(customerId, {
+            type: 'message_received',
+            channel: 'sms',
+            phone: fromNumber,
+            message: (messageBody || '').substring(0, 500),
+          });
+          conversation.leadCaptured = true;
+        }
+      } catch (leadErr) {
+        console.error('⚠️ [SMS-WEBHOOK] Lead capture failed:', leadErr.message);
+      }
     }
 
     // Add AI response to conversation

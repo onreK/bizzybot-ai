@@ -174,6 +174,24 @@ async function handleDM(event, connection) {
        VALUES ($1, 'dm', $2, $3, $4)`,
       [connection.user_id, senderId, messageText.substring(0, 500), reply.substring(0, 1000)]
     ).catch(() => {});
+
+    // Real interaction + lead capture (email/phone typed into the DM)
+    try {
+      const custRes = await query(
+        'SELECT id FROM customers WHERE clerk_user_id = $1 LIMIT 1',
+        [connection.user_id]
+      );
+      if (custRes.rows[0]?.id) {
+        const { captureInboundMessage } = await import('@/lib/leads-service.js');
+        await captureInboundMessage(custRes.rows[0].id, {
+          channel: 'instagram',
+          text: messageText,
+          metadata: { sender_id: senderId },
+        });
+      }
+    } catch (err) {
+      console.error('⚠️ Instagram lead capture failed:', err.message);
+    }
   }
 }
 

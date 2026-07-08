@@ -12,7 +12,8 @@ export async function GET(request, { params }) {
 (function() {
   console.log('AI Widget initializing for ${subdomain}...');
   
-  const WIDGET_API_BASE = '${process.env.NEXT_PUBLIC_APP_URL || 'https://yoursite.com'}';
+  const WIDGET_API_BASE = '${process.env.NEXT_PUBLIC_APP_URL || 'https://bizzybotai.com'}';
+  const SESSION_ID = 'w' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   let chatWidget = null;
   let chatOpen = false;
   let messages = [];
@@ -296,29 +297,23 @@ export async function GET(request, { params }) {
     isTyping = true;
     
     try {
-      // Send to chat API
-      const response = await fetch(WIDGET_API_BASE + '/api/chat', {
+      // Send to the public widget chat API (visitors have no login session)
+      const response = await fetch(WIDGET_API_BASE + '/api/widget/${subdomain}/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages,
-          businessContext: {
-            businessId: config.businessId,
-            businessName: config.businessName,
-            industry: config.industry,
-            ownerName: config.ownerName,
-            source: 'widget'
-          }
+          sessionId: SESSION_ID
         }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         messages.push({
           from: 'bot',
-          text: data.message,
+          text: data.response,
           timestamp: new Date().toISOString()
         });
       } else {
@@ -328,7 +323,7 @@ export async function GET(request, { params }) {
       console.error('Chat error:', error);
       messages.push({
         from: 'bot',
-        text: \`Sorry, I'm having trouble right now. Please call \${config.ownerName} for immediate assistance.\`,
+        text: \`Sorry, I'm having trouble right now. Please contact \${config.businessName} directly for immediate assistance.\`,
         timestamp: new Date().toISOString()
       });
     } finally {
