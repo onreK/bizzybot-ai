@@ -268,8 +268,8 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 **SMS:**
 5. [ ] Check Twilio toll-free verification status for (866) 944-5685 (submitted 2026-07-06, ~3-5 biz days → likely ready ~07-09/07-11). Once "Verified," **text the number** to test SMS AI end-to-end. (SMS text AI uses the same OpenAI key as email — confirm it's funded.)
 
-**Call forwarding (built 2026-07-07 — needs live test):**
-5b. [ ] On `/voice` → Call Handling: set cell **858-900-4220**, mode "Ring my phone first", ~18s, Save. Then call (866) 944-5685: (a) answer → confirm connected; (b) let it ring out → AI picks up + **email** missed-lead alert arrives. Missed-call **text** won't deliver until the toll-free is SMS-verified (item 5).
+**Call forwarding:**
+5b. [x] **LIVE-VERIFIED 2026-07-08 by founder**: "Ring my phone first" works — cell rings first, AI picks up on no-answer. Still unconfirmed: the **email** missed-lead alert on ring-out (check inbox next test); missed-call **text** still waits on toll-free SMS verification (item 5).
 
 **Console errors — ALL FIXED 2026-07-07 evening:**
 6. [x] chat 405s → /api/chat now has a GET handler (conversations + test-connection)
