@@ -27,6 +27,152 @@ const TIMEZONES = [
 
 const CHANNEL_LABELS = { gmail: 'Gmail', outlook: 'Outlook', email: 'Email', sms: 'SMS', chat: 'Web Chat', facebook: 'Facebook', instagram: 'Instagram', voice: 'Voice' };
 
+// ── Week grid helpers ────────────────────────────────────────────────────────
+const HOUR_START = 8;   // 8 AM
+const HOUR_END = 18;    // 6 PM
+const HOUR_PX = 48;
+const GRID_H = (HOUR_END - HOUR_START) * HOUR_PX;
+
+// Minutes since midnight as seen in the business timezone
+function tzMinutes(iso, tz) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: 'numeric', hourCycle: 'h23' })
+    .formatToParts(new Date(iso));
+  const h = parseInt(parts.find(p => p.type === 'hour')?.value || 0, 10);
+  const m = parseInt(parts.find(p => p.type === 'minute')?.value || 0, 10);
+  return h * 60 + m;
+}
+
+// Stable YYYY-MM-DD key in the business timezone
+function tzDayKey(iso, tz) {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: tz });
+}
+
+// Top offset + height (px) for a block spanning start→end, clamped to view
+function blockPosition(startISO, endISO, tz) {
+  const startMin = tzMinutes(startISO, tz);
+  const endMin = endISO ? tzMinutes(endISO, tz) : startMin + 60;
+  const viewStart = HOUR_START * 60;
+  const viewEnd = HOUR_END * 60;
+  if (endMin <= viewStart || startMin >= viewEnd) return null; // fully outside
+  const top = Math.max(0, ((startMin - viewStart) / 60) * HOUR_PX);
+  const bottom = Math.min(GRID_H, ((endMin - viewStart) / 60) * HOUR_PX);
+  return { top, height: Math.max(18, bottom - top) };
+}
+
+function WeekGrid({ events, slots, tz }) {
+  const now = new Date();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now.getTime() + i * 86400000);
+    return {
+      key: tzDayKey(d.toISOString(), tz),
+      label: d.toLocaleDateString('en-US', { weekday: 'short', timeZone: tz }),
+      dayNum: d.toLocaleDateString('en-US', { day: 'numeric', timeZone: tz }),
+      isToday: i === 0,
+    };
+  });
+
+  const eventsByDay = {};
+  events.forEach(ev => { (eventsByDay[tzDayKey(ev.start, tz)] = eventsByDay[tzDayKey(ev.start, tz)] || []).push(ev); });
+  const slotsByDay = {};
+  slots.forEach(s => { (slotsByDay[tzDayKey(s.start, tz)] = slotsByDay[tzDayKey(s.start, tz)] || []).push(s); });
+
+  const nowMin = tzMinutes(now.toISOString(), tz);
+  const nowTop = ((nowMin - HOUR_START * 60) / 60) * HOUR_PX;
+  const hourLabels = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
+  const fmtHour = (h) => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
+  const fmtT = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz });
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[760px]">
+        {/* Day headers */}
+        <div className="grid" style={{ gridTemplateColumns: `56px repeat(7, 1fr)` }}>
+          <div />
+          {days.map(d => (
+            <div key={d.key} className={`text-center pb-2 ${d.isToday ? 'text-violet-300' : 'text-gray-400'}`}>
+              <div className="text-xs uppercase tracking-wide">{d.label}</div>
+              <div className={`text-lg font-semibold ${d.isToday ? 'text-white' : 'text-gray-300'}`}>{d.dayNum}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Grid body */}
+        <div className="grid" style={{ gridTemplateColumns: `56px repeat(7, 1fr)` }}>
+          {/* Hour gutter */}
+          <div className="relative" style={{ height: GRID_H }}>
+            {hourLabels.map((h, i) => (
+              <div key={h} className="absolute right-2 -translate-y-1/2 text-[10px] text-gray-600" style={{ top: i * HOUR_PX }}>
+                {i === 0 ? '' : fmtHour(h)}
+              </div>
+            ))}
+          </div>
+
+          {days.map(d => (
+            <div key={d.key} className={`relative border-l border-gray-800 ${d.isToday ? 'bg-violet-500/[0.03]' : ''}`} style={{ height: GRID_H }}>
+              {/* Hour lines */}
+              {hourLabels.map((h, i) => i > 0 && (
+                <div key={h} className="absolute inset-x-0 border-t border-gray-800/60" style={{ top: i * HOUR_PX }} />
+              ))}
+
+              {/* AI-offerable slots (green) */}
+              {(slotsByDay[d.key] || []).map((s, i) => {
+                const pos = blockPosition(s.start, s.end, tz);
+                if (!pos) return null;
+                return (
+                  <div
+                    key={`s${i}`}
+                    className="absolute inset-x-1 rounded-md bg-green-500/10 border border-dashed border-green-500/40 px-1.5 py-0.5 overflow-hidden"
+                    style={{ top: pos.top, height: pos.height }}
+                    title={`AI can offer: ${fmtT(s.start)}`}
+                  >
+                    <span className="text-[10px] text-green-300 leading-tight">{fmtT(s.start)} · open</span>
+                  </div>
+                );
+              })}
+
+              {/* Busy events (violet) */}
+              {(eventsByDay[d.key] || []).map((ev, i) => {
+                const pos = blockPosition(ev.start, ev.end, tz);
+                if (!pos) return null;
+                return (
+                  <div
+                    key={`e${i}`}
+                    className="absolute inset-x-1 rounded-md bg-violet-600/30 border border-violet-500/50 px-1.5 py-0.5 overflow-hidden"
+                    style={{ top: pos.top, height: pos.height, zIndex: 2 }}
+                    title={`${ev.subject} — ${fmtT(ev.start)}`}
+                  >
+                    <div className="text-[10px] font-medium text-violet-100 leading-tight truncate">{ev.subject}</div>
+                    {pos.height > 34 && <div className="text-[10px] text-violet-300/80 leading-tight">{fmtT(ev.start)}</div>}
+                  </div>
+                );
+              })}
+
+              {/* Now line (today only) */}
+              {d.isToday && nowTop >= 0 && nowTop <= GRID_H && (
+                <div className="absolute inset-x-0 z-10 pointer-events-none" style={{ top: nowTop }}>
+                  <div className="border-t-2 border-red-500/80 relative">
+                    <span className="absolute -left-0.5 -top-[5px] w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-5 mt-3 pl-14 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-violet-600/30 border border-violet-500/50 inline-block" /> Busy
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-green-500/10 border border-dashed border-green-500/40 inline-block" /> AI can book here
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SchedulingPage() {
   const [scheduling, setScheduling] = useState({ booking_url: '', booking_auto_send: true, business_timezone: 'America/New_York' });
   const [aiBookings, setAiBookings] = useState([]);
@@ -110,16 +256,7 @@ export default function SchedulingPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz });
   const fmtSlot = (iso) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz, timeZoneName: 'short' });
-  const dayKey = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz });
-
-  // Group agenda events by business-local day
-  const agendaByDay = agenda.reduce((acc, ev) => {
-    const key = dayKey(ev.start);
-    (acc[key] = acc[key] || []).push(ev);
-    return acc;
-  }, {});
 
   if (loading) {
     return (
@@ -130,7 +267,7 @@ export default function SchedulingPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl">
+    <div className="p-6 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="w-10 h-10 bg-violet-500/10 border border-violet-500/20 rounded-lg flex items-center justify-center">
@@ -144,7 +281,7 @@ export default function SchedulingPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[400px,1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-6 items-start">
 
         {/* ─── LEFT: settings ─────────────────────────────────────── */}
         <div className="space-y-5">
@@ -312,13 +449,18 @@ export default function SchedulingPage() {
             </div>
           ) : (
             <>
-              {/* This Week */}
+              {/* Week-view calendar */}
               <div className="bg-[#161B22] border border-gray-800 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-white font-semibold flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-violet-400" />
-                    This Week
-                  </h3>
+                  <div>
+                    <h3 className="text-white font-semibold flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-violet-400" />
+                      Your Week
+                    </h3>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Live from your Outlook calendar — green blocks are times the AI can offer leads.
+                    </p>
+                  </div>
                   {calLoading && <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />}
                 </div>
 
@@ -326,79 +468,66 @@ export default function SchedulingPage() {
                   <p className="text-gray-500 text-sm flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-yellow-500" /> Couldn&apos;t load your calendar right now.
                   </p>
-                ) : Object.keys(agendaByDay).length === 0 && !calLoading ? (
-                  <p className="text-gray-500 text-sm">Nothing on the calendar for the next 7 days — wide open.</p>
                 ) : (
-                  <div className="space-y-4">
-                    {Object.entries(agendaByDay).map(([day, events]) => (
-                      <div key={day}>
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{day}</div>
-                        <div className="space-y-1.5">
-                          {events.map((ev, i) => (
-                            <div key={i} className="flex items-center gap-3 px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg">
-                              <span className="text-violet-400 text-xs font-medium w-20 flex-shrink-0">{fmtTime(ev.start)}</span>
-                              <span className="text-gray-300 text-sm truncate">{ev.subject}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <WeekGrid events={agenda} slots={slots} tz={tz} />
                 )}
               </div>
 
-              {/* Slots the AI is offering */}
-              <div className="bg-[#161B22] border border-gray-800 rounded-xl p-6">
-                <h3 className="text-white font-semibold flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-green-400" />
-                  Times the AI is offering right now
-                </h3>
-                <p className="text-gray-500 text-xs mb-4">
-                  Pulled live from your calendar — these are the open slots leads can book.
-                </p>
-                {slots.length === 0 && !calLoading ? (
-                  <p className="text-gray-500 text-sm">No open slots found in the next 7 business days.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((s, i) => (
-                      <span key={i} className="px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded-lg text-sm text-green-300">
-                        {fmtSlot(s.start)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* AI-booked appointments */}
-              <div className="bg-[#161B22] border border-gray-800 rounded-xl p-6">
-                <h3 className="text-white font-semibold flex items-center gap-2 mb-1">
-                  <CalendarCheck className="w-4 h-4 text-violet-400" />
-                  Booked by your AI
-                </h3>
-                <p className="text-gray-500 text-xs mb-4">
-                  Appointments the AI scheduled for you, most recent first.
-                </p>
-                {aiBookings.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No AI-booked appointments yet — they&apos;ll appear here.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {aiBookings.map((b, i) => (
-                      <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-[#0D1117] border border-gray-800 rounded-lg">
-                        <div className="min-w-0">
-                          <div className="text-sm text-white">
-                            {b.start ? fmtSlot(b.start + (b.start.length === 16 ? ':00Z' : '')) : 'Appointment'}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {b.attendee || 'No email on file'}
-                          </div>
-                        </div>
-                        <span className="text-xs text-gray-400 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 flex-shrink-0 ml-3">
-                          {CHANNEL_LABELS[b.channel] || b.channel}
+              {/* Offering + AI-booked, side by side */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                {/* Slots the AI is offering */}
+                <div className="bg-[#161B22] border border-gray-800 rounded-xl p-6">
+                  <h3 className="text-white font-semibold flex items-center gap-2 mb-1">
+                    <Clock className="w-4 h-4 text-green-400" />
+                    Times the AI is offering right now
+                  </h3>
+                  <p className="text-gray-500 text-xs mb-4">
+                    The open slots leads can book, pulled live from your calendar.
+                  </p>
+                  {slots.length === 0 && !calLoading ? (
+                    <p className="text-gray-500 text-sm">No open slots found in the next 7 business days.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {slots.map((s, i) => (
+                        <span key={i} className="px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded-lg text-sm text-green-300">
+                          {fmtSlot(s.start)}
                         </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* AI-booked appointments */}
+                <div className="bg-[#161B22] border border-gray-800 rounded-xl p-6">
+                  <h3 className="text-white font-semibold flex items-center gap-2 mb-1">
+                    <CalendarCheck className="w-4 h-4 text-violet-400" />
+                    Booked by your AI
+                  </h3>
+                  <p className="text-gray-500 text-xs mb-4">
+                    Appointments the AI scheduled for you, most recent first.
+                  </p>
+                  {aiBookings.length === 0 ? (
+                    <p className="text-gray-500 text-sm">No AI-booked appointments yet — they&apos;ll appear here.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {aiBookings.map((b, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-[#0D1117] border border-gray-800 rounded-lg">
+                          <div className="min-w-0">
+                            <div className="text-sm text-white">
+                              {b.start ? fmtSlot(b.start + (b.start.length === 16 ? ':00Z' : '')) : 'Appointment'}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {b.attendee || 'No email on file'}
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-400 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 flex-shrink-0 ml-3">
+                            {CHANNEL_LABELS[b.channel] || b.channel}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

@@ -61,6 +61,22 @@ UI**, and real `appointment_booked` analytics events with nowhere to display.
 
 No new tables, no new dependencies.
 
+## Addendum (2026-07-08, after first live look)
+
+Founder feedback: still too much dead space on wide screens; wants to *see*
+the schedule visually, not as lists. Changes:
+
+- Page cap widened from `max-w-6xl` to `max-w-[1600px]`.
+- "This Week" list replaced by a **week-view calendar grid**: 7 day columns
+  (starting today) × hour rows (8 AM–6 PM business-local), busy events as
+  violet blocks (subject + time), AI-offerable slots overlaid as green
+  blocks, red "now" line on today. Rendered from the same Graph data — no
+  iframe (Outlook can't be embedded cross-origin; drawing it ourselves also
+  lets us overlay AI slots).
+- "Times the AI is offering" + "Booked by your AI" become side-by-side cards
+  under the grid.
+- Grid scrolls horizontally on small screens (min-width inner).
+
 ## Out of scope
 
 Calendly OAuth (decided link-only 2026-07-07), document receiving, editing
