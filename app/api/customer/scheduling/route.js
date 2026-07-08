@@ -9,7 +9,8 @@ async function ensureColumn() {
   await query(`
     ALTER TABLE customers
     ADD COLUMN IF NOT EXISTS booking_url TEXT,
-    ADD COLUMN IF NOT EXISTS booking_auto_send BOOLEAN DEFAULT true
+    ADD COLUMN IF NOT EXISTS booking_auto_send BOOLEAN DEFAULT true,
+    ADD COLUMN IF NOT EXISTS business_timezone TEXT
   `);
 }
 
