@@ -7,26 +7,26 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   metadataBase: new URL('https://bizzybotai.com'),
   title: {
-    default: 'BizzyBot AI — AI Receptionist for Calls, Texts, Email & Social Media',
-    template: '%s | BizzyBot AI',
+    default: 'BizzyBot — The AI Receptionist for Calls, Texts, Email & Social Media',
+    template: '%s | BizzyBot',
   },
   description:
     'The AI receptionist that answers every call, text, email, web chat, and social DM — then captures, scores, and nurtures every lead and books appointments on your calendar. From $29/mo. 14-day free trial.',
   keywords:
     'AI receptionist, AI answering service, missed call text back, AI phone answering, AI receptionist for small business, lead capture software, AI appointment booking',
-  authors: [{ name: 'BizzyBot AI' }],
+  authors: [{ name: 'BizzyBot' }],
   alternates: { canonical: 'https://bizzybotai.com' },
   openGraph: {
-    title: 'BizzyBot AI — The AI Receptionist That Answers Everything',
+    title: 'BizzyBot — The AI Receptionist That Answers Everything',
     description:
       'Calls, texts, emails, web chat, and social DMs — answered in seconds, every lead captured, scored, nurtured, and booked on your calendar. From $29/mo.',
     url: 'https://bizzybotai.com',
-    siteName: 'BizzyBot AI',
+    siteName: 'BizzyBot',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BizzyBot AI — The AI Receptionist That Answers Everything',
+    title: 'BizzyBot — The AI Receptionist That Answers Everything',
     description:
       'Calls, texts, emails, web chat, and social DMs — answered 24/7, every lead captured and booked. From $29/mo.',
   },

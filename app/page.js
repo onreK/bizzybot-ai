@@ -32,7 +32,7 @@ function DashboardPreview() {
           <div className="flex-1">
             <div className="bg-[#1A2438] rounded-md px-3 py-1 text-xs text-gray-500 flex items-center gap-2 max-w-xs mx-auto">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              bizzybot.ai/dashboard
+              bizzybotai.com/dashboard
             </div>
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function HomePage() {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: 'BizzyBot AI',
+              name: 'BizzyBot',
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web',
               description:
@@ -340,10 +340,10 @@ export default function HomePage() {
               mainEntity: [
                 {
                   '@type': 'Question',
-                  name: 'What is BizzyBot AI?',
+                  name: 'What is BizzyBot?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'BizzyBot AI is an AI receptionist for small businesses. It answers your phone calls, text messages, emails, website chat, and social media DMs 24/7, captures and scores every lead, books appointments directly on your calendar, and alerts you the moment a hot lead comes in.',
+                    text: 'BizzyBot is an AI receptionist for small businesses. It answers your phone calls, text messages, emails, website chat, and social media DMs 24/7, captures and scores every lead, books appointments directly on your calendar, and alerts you the moment a hot lead comes in.',
                   },
                 },
                 {
@@ -351,7 +351,7 @@ export default function HomePage() {
                   name: 'How much does an AI receptionist cost?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'BizzyBot AI starts at $29/month for the Starter plan (all channels included), $69/month for Professional, and $199/month for Business with 400 AI voice minutes. Every plan includes a 14-day free trial with no credit card required. Comparable voice-only AI receptionists typically cost $49-$500/month.',
+                    text: 'BizzyBot starts at $29/month for the Starter plan (all channels included), $69/month for Professional, and $199/month for Business with 400 AI voice minutes. Every plan includes a 14-day free trial with no credit card required. Comparable voice-only AI receptionists typically cost $49-$500/month.',
                   },
                 },
                 {
@@ -646,14 +646,14 @@ export default function HomePage() {
               <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
                 <Image src="/Bizzybot Logo 2.png" alt="BizzyBot" width={28} height={28} className="w-full h-full object-contain" />
               </div>
-              <span className="font-semibold text-white">BizzyBot AI</span>
+              <span className="font-semibold text-white">BizzyBot</span>
             </div>
             <div className="flex gap-6 text-sm text-gray-500">
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
               <a href="/demo" className="hover:text-white transition-colors">Demo</a>
             </div>
-            <p className="text-xs text-gray-600">&copy; 2026 BizzyBot AI. All rights reserved.</p>
+            <p className="text-xs text-gray-600">&copy; 2026 BizzyBot. All rights reserved.</p>
           </div>
         </footer>
       </SignedOut>
