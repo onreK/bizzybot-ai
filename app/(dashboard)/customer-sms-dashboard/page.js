@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   MessageSquare, RefreshCw, Settings, Phone, Bell, BellOff,
-  Clock, Flame, Users, Send, CheckCircle2, AlertTriangle,
+  Clock, Flame, Users, Send, CheckCircle2, AlertTriangle, ChevronDown,
 } from 'lucide-react';
 
 function formatPhoneNumber(number) {
@@ -56,32 +56,63 @@ function KpiCard({ icon: Icon, label, value, valueClass = 'text-white' }) {
 }
 
 function ConversationRow({ conversation }) {
-  const last = conversation.messages?.[conversation.messages.length - 1];
-  const topScore = conversation.messages?.length
-    ? Math.max(...conversation.messages.map(m => m.hotLeadScore || 0))
+  const [expanded, setExpanded] = useState(false);
+  const messages = conversation.messages || [];
+  const last = messages[messages.length - 1];
+  const topScore = messages.length
+    ? Math.max(...messages.map(m => m.hotLeadScore || 0))
     : 0;
   return (
-    <div className="border border-gray-800 rounded-lg px-4 py-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-white text-sm font-medium">{formatPhoneNumber(conversation.fromNumber)}</span>
-            {conversation.leadCaptured && (
-              <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full">Lead</span>
-            )}
-            {topScore >= 7 && (
-              <span className={`text-xs px-2 py-0.5 rounded-full ${scoreTone(topScore)}`}>🔥 {topScore}/10</span>
+    <div className="border border-gray-800 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-white text-sm font-medium">{formatPhoneNumber(conversation.fromNumber)}</span>
+              {conversation.leadCaptured && (
+                <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full">Lead</span>
+              )}
+              {topScore >= 7 && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${scoreTone(topScore)}`}>🔥 {topScore}/10</span>
+              )}
+            </div>
+            {!expanded && last?.body && (
+              <p className="text-gray-400 text-xs truncate">{last.body}</p>
             )}
           </div>
-          {last?.body && (
-            <p className="text-gray-400 text-xs truncate">{last.body}</p>
-          )}
+          <div className="flex items-start gap-3 flex-shrink-0">
+            <div className="text-right">
+              <div className="text-gray-500 text-xs">{timeAgo(conversation.createdAt)}</div>
+              <div className="text-gray-600 text-xs mt-0.5">{messages.length} msgs</div>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 text-gray-500 mt-0.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            />
+          </div>
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-gray-500 text-xs">{timeAgo(conversation.createdAt)}</div>
-          <div className="text-gray-600 text-xs mt-0.5">{conversation.messages?.length || 0} msgs</div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-800 bg-[#0D1117] px-4 py-3 space-y-2">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
+              <div className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                m.direction === 'inbound'
+                  ? 'bg-gray-800 text-gray-200 rounded-bl-sm'
+                  : 'bg-blue-500/15 text-blue-100 border border-blue-500/20 rounded-br-sm'
+              }`}>
+                <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>
+                <p className={`text-[10px] mt-1 ${m.direction === 'inbound' ? 'text-gray-500' : 'text-blue-300/60'}`}>
+                  {m.direction === 'inbound' ? 'Lead' : 'AI'} · {timeAgo(m.timestamp)}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
