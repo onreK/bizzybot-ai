@@ -193,8 +193,10 @@ export default function LeadsPage() {
       );
     }
 
-    // Sorting with direction
-    const dir = sortDir === 'asc' ? 1 : -1;
+    // Sorting with direction. The comparators below are written descending
+    // (b - a), so 'desc' multiplies by 1 and 'asc' flips with -1 — the old
+    // mapping was inverted, showing oldest activity first by default.
+    const dir = sortDir === 'asc' ? -1 : 1;
     switch (sortBy) {
       case 'recent':
         filtered.sort((a, b) => dir * (new Date(b.last_interaction) - new Date(a.last_interaction)));
