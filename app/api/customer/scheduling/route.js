@@ -33,7 +33,7 @@ export async function GET() {
     if (row.id) {
       try {
         const bookingsRes = await query(
-          `SELECT event_data, channel, created_at
+          `SELECT metadata, channel, created_at
            FROM ai_analytics_events
            WHERE customer_id = $1 AND event_type = 'appointment_booked'
            ORDER BY created_at DESC LIMIT 10`,
@@ -41,7 +41,7 @@ export async function GET() {
         );
         aiBookings = bookingsRes.rows.map(r => {
           let data = {};
-          try { data = typeof r.event_data === 'string' ? JSON.parse(r.event_data) : (r.event_data || {}); } catch {}
+          try { data = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {}); } catch {}
           return {
             start: data.start || null,
             attendee: data.attendee || null,

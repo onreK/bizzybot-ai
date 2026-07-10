@@ -114,7 +114,7 @@ export async function POST(request, { params }) {
     // Record the real inbound interaction (feeds Analytics/Overview)
     await query(`
       INSERT INTO ai_analytics_events
-      (customer_id, event_type, event_data, user_message, channel, confidence_score, created_at)
+      (customer_id, event_type, metadata, user_message, channel, confidence_score, created_at)
       VALUES ($1, 'message_received', $2, $3, 'chat', 1.0, CURRENT_TIMESTAMP)
     `, [
       customer.id,
