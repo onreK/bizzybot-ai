@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs';
 import { query } from '@/lib/database.js';
 import { generateAIResponse } from '@/lib/ai-service.js';
 import { checkEmailFilter } from '@/lib/email-filtering.js';
-import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
+import { createOrUpdateContact, trackLeadEvent } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 
 export const dynamic = 'force-dynamic';
@@ -273,12 +273,15 @@ async function processAccount(conn) {
       }).catch(() => {});
 
       if (aiResult.hotLead?.isHotLead) {
-        await updateLeadScoring({
-          clerkUserId: customer.clerk_user_id,
-          customerId: customer.id,
-          contactEmail: fromEmail,
-          score: aiResult.hotLead.score || 80,
-          temperature: 'hot',
+        // hot_lead event bumps hot_lead_count → rescores → temperature 'hot'
+        // (the old updateLeadScoring call here passed the wrong arguments and
+        // silently failed — contacts never got promoted)
+        await trackLeadEvent(customer.id, {
+          type: 'hot_lead',
+          channel: 'outlook',
+          email: fromEmail,
+          name: fromName,
+          message: bodyText,
         }).catch(() => {});
         await sendHotLeadAlert(customer.clerk_user_id, {
           contactName: fromName,

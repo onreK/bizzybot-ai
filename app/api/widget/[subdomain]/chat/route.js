@@ -91,20 +91,26 @@ export async function POST(request, { params }) {
       if (existing.rows.length > 0) {
         convId = existing.rows[0].id;
       } else {
+        // conversation_key + source are NOT NULL legacy columns; messages
+        // require user_id and have no metadata column (same schema traps as
+        // the SMS webhook had)
         const created = await query(
-          `INSERT INTO conversations (user_id, type, status, contact_phone) VALUES ($1, 'chat', 'active', $2) RETURNING id`,
-          [customer.clerk_user_id, sessKey]
+          `INSERT INTO conversations (user_id, type, status, contact_phone, conversation_key, source)
+           VALUES ($1, 'chat', 'active', $2, $3, 'chat') RETURNING id`,
+          [customer.clerk_user_id, sessKey, `chat_${customer.clerk_user_id}_${sessKey}`]
         );
         convId = created.rows[0]?.id;
       }
       if (convId) {
         await query(
-          `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'user', $2, $3)`,
-          [convId, userText, JSON.stringify({ source: 'widget' })]
+          `INSERT INTO messages (conversation_id, user_id, sender_type, content, direction)
+           VALUES ($1, $2, 'user', $3, 'inbound')`,
+          [convId, customer.clerk_user_id, userText]
         );
         await query(
-          `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'assistant', $2, $3)`,
-          [convId, responseText, JSON.stringify({ hotLeadScore: aiResult.hotLead?.score || 0 })]
+          `INSERT INTO messages (conversation_id, user_id, sender_type, content, direction, hot_lead_score)
+           VALUES ($1, $2, 'assistant', $3, 'outbound', $4)`,
+          [convId, customer.clerk_user_id, responseText, aiResult.hotLead?.score || 0]
         );
       }
     } catch (persistErr) {
@@ -134,8 +140,18 @@ export async function POST(request, { params }) {
       }).catch(err => console.error('⚠️ Widget lead capture failed:', err.message));
     }
 
-    // Hot lead → alert the owner, same as SMS/voice
+    // Hot lead → alert the owner, same as SMS/voice; and if we know who they
+    // are, promote the contact (hot_lead event → notification bell + feeds)
     if (aiResult.hotLead?.isHotLead) {
+      if (email || phone) {
+        await trackLeadEvent(customer.id, {
+          type: 'hot_lead',
+          channel: 'chat',
+          email,
+          phone,
+          message: userText.substring(0, 500),
+        }).catch(() => {});
+      }
       await sendHotLeadAlert(customer.clerk_user_id, {
         contactEmail: email,
         contactPhone: phone,

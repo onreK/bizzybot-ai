@@ -212,6 +212,17 @@ export async function POST(request) {
             phone: fromNumber,
             message: (messageBody || '').substring(0, 500),
           });
+          // Promote the contact — this is what makes them 'hot' (bumps
+          // hot_lead_count → rescores → notification bell + hot lead feeds).
+          // sendHotLeadAlert above only notifies the owner.
+          if (aiResult.hotLead?.isHotLead) {
+            await trackLeadEvent(customerId, {
+              type: 'hot_lead',
+              channel: 'sms',
+              phone: fromNumber,
+              message: (messageBody || '').substring(0, 500),
+            });
+          }
           conversation.leadCaptured = true;
         }
       } catch (leadErr) {
