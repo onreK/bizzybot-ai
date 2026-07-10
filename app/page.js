@@ -309,13 +309,95 @@ export default function HomePage() {
           )}
         </nav>
 
+        {/* Structured data — helps Google + AI engines (ChatGPT, Perplexity)
+            understand and cite BizzyBot when answering "best AI receptionist" */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'BizzyBot AI',
+              applicationCategory: 'BusinessApplication',
+              operatingSystem: 'Web',
+              description:
+                'AI receptionist that answers calls, texts, emails, web chat, and social media DMs 24/7 — capturing, scoring, and nurturing every lead and booking appointments automatically.',
+              url: 'https://bizzybotai.com',
+              offers: [
+                { '@type': 'Offer', name: 'Starter', price: '29', priceCurrency: 'USD' },
+                { '@type': 'Offer', name: 'Professional', price: '69', priceCurrency: 'USD' },
+                { '@type': 'Offer', name: 'Business', price: '199', priceCurrency: 'USD' },
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: [
+                {
+                  '@type': 'Question',
+                  name: 'What is BizzyBot AI?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'BizzyBot AI is an AI receptionist for small businesses. It answers your phone calls, text messages, emails, website chat, and social media DMs 24/7, captures and scores every lead, books appointments directly on your calendar, and alerts you the moment a hot lead comes in.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How much does an AI receptionist cost?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'BizzyBot AI starts at $29/month for the Starter plan (all channels included), $69/month for Professional, and $199/month for Business with 400 AI voice minutes. Every plan includes a 14-day free trial with no credit card required. Comparable voice-only AI receptionists typically cost $49-$500/month.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'What channels does the AI answer?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Phone calls (with the option to ring your cell first and have the AI pick up only if you miss it), SMS text messages, email (Gmail and Outlook), your website chat widget, and Facebook Messenger and Instagram DMs — all from one number and one dashboard.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Can the AI book appointments for me?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Yes. Connect your calendar and the AI offers your real open time slots to leads, books confirmed appointments directly on your calendar at your chosen meeting length, and sends the lead a confirmation — over text, email, or chat.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How long does setup take?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Under 10 minutes: get your business number (the AI answers calls and texts on it), connect your email, and drop the chat widget on your website. The AI learns your business from a simple settings page you control — no coding required.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Will I lose control of how the AI talks to my customers?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'No. You control the AI’s tone, knowledge, pricing answers, and escalation rules from your dashboard. You can have it ring you first on calls, escalate complex questions to you, and alert you instantly by text and email for hot leads.',
+                  },
+                },
+              ],
+            }),
+          }}
+        />
+
         {/* Hero */}
         <section className="relative pt-40 pb-24 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium px-3 py-1.5 rounded-full mb-8">
                 <Zap className="w-3 h-3" />
-                AI-powered for any client-facing business
+                The AI receptionist for any client-facing business
               </div>
 
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.08]">
@@ -327,8 +409,9 @@ export default function HomePage() {
               </h1>
 
               <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                BizzyBot answers your calls, texts, emails, and web chat — replying to every inquiry in seconds,
-                scoring every lead, and alerting you the moment someone&apos;s ready to buy.
+                BizzyBot is the AI receptionist that answers your calls, texts, emails, web chat, and social
+                DMs — capturing and scoring every lead, booking appointments straight onto your calendar,
+                and following up so nothing slips.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
