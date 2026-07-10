@@ -9,6 +9,7 @@ import {
   MessageSquare, Mail, Smartphone, BarChart3,
   Menu, X, Bot, ChevronRight, TrendingUp, Shield,
   Phone, Wrench, Home, Scissors, HeartHandshake,
+  UserPlus, CalendarCheck, Bell, Repeat,
 } from 'lucide-react';
 
 function DashboardPreview() {
@@ -520,6 +521,50 @@ export default function HomePage() {
                 <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
                   <CheckCircle className="w-4 h-4 text-violet-400 flex-shrink-0" />
                   {cap}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Lifecycle strip — the full front office, not just answering */}
+        <section className="py-28 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Beyond Answering</div>
+              <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">
+                Most AI receptionists stop at answering.
+                <br />
+                <span className="bg-gradient-to-r from-violet-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  BizzyBot runs your whole front office.
+                </span>
+              </h2>
+              <p className="text-gray-400 mt-4 max-w-xl mx-auto text-sm leading-relaxed">
+                Every conversation moves through the same pipeline — automatically, on every channel, around the clock.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { icon: <Phone className="w-4 h-4" />, title: 'Answered', body: 'Calls, texts, emails & DMs — replied in seconds' },
+                { icon: <UserPlus className="w-4 h-4" />, title: 'Captured', body: 'Every contact saved as a lead, automatically' },
+                { icon: <TrendingUp className="w-4 h-4" />, title: 'Scored', body: 'Hot, warm, or cold — ranked by buying intent' },
+                { icon: <CalendarCheck className="w-4 h-4" />, title: 'Booked', body: 'Appointments land straight on your calendar' },
+                { icon: <Repeat className="w-4 h-4" />, title: 'Followed up', body: 'Quiet leads get nudged so nothing slips' },
+                { icon: <Bell className="w-4 h-4" />, title: "You're alerted", body: 'Text + email the moment a lead runs hot' },
+              ].map((stage, i, arr) => (
+                <div key={i} className="relative bg-[#0D1421] border border-[#1E2D40] rounded-2xl p-5 hover:border-[#2A3A55] transition-all duration-300">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                      {stage.icon}
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-600">0{i + 1}</span>
+                  </div>
+                  <h3 className="font-semibold text-white text-sm mb-1.5">{stage.title}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">{stage.body}</p>
+                  {i < arr.length - 1 && (
+                    <ChevronRight className="hidden lg:block absolute top-1/2 -right-2.5 -translate-y-1/2 w-4 h-4 text-gray-700 z-10" />
+                  )}
                 </div>
               ))}
             </div>
