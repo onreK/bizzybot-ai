@@ -31,21 +31,28 @@ async function persistSmsExchange(clerkUserId, contactPhone, inboundBody, outbou
     if (existing.rows.length > 0) {
       convId = existing.rows[0].id;
     } else {
+      // conversation_key + source are NOT NULL legacy columns with no default —
+      // omitting them made this insert fail (silently) on every text.
       const created = await query(
-        `INSERT INTO conversations (user_id, type, status, contact_phone) VALUES ($1, 'sms', 'active', $2) RETURNING id`,
-        [clerkUserId, contactPhone]
+        `INSERT INTO conversations (user_id, type, status, contact_phone, conversation_key, source)
+         VALUES ($1, 'sms', 'active', $2, $3, 'sms') RETURNING id`,
+        [clerkUserId, contactPhone, `sms_${clerkUserId}_${contactPhone}`]
       );
       convId = created.rows[0]?.id;
     }
     if (!convId) return;
 
+    // messages has no metadata column, and user_id is NOT NULL — use the
+    // real columns (direction / from_number / to_number / hot_lead_score).
     await query(
-      `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'user', $2, $3)`,
-      [convId, inboundBody, JSON.stringify({ from: contactPhone })]
+      `INSERT INTO messages (conversation_id, user_id, sender_type, content, direction, from_number)
+       VALUES ($1, $2, 'user', $3, 'inbound', $4)`,
+      [convId, clerkUserId, inboundBody, contactPhone]
     );
     await query(
-      `INSERT INTO messages (conversation_id, sender_type, content, metadata) VALUES ($1, 'assistant', $2, $3)`,
-      [convId, outboundBody, JSON.stringify({ hotLeadScore: hotLeadScore || 0 })]
+      `INSERT INTO messages (conversation_id, user_id, sender_type, content, direction, to_number, hot_lead_score)
+       VALUES ($1, $2, 'assistant', $3, 'outbound', $4, $5)`,
+      [convId, clerkUserId, outboundBody, contactPhone, hotLeadScore || 0]
     );
   } catch (err) {
     console.error('⚠️ [SMS-WEBHOOK] Failed to persist conversation:', err.message);

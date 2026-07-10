@@ -4,14 +4,6 @@ import { query } from '../../../../lib/database.js';
 
 export const dynamic = 'force-dynamic';
 
-function parseMeta(meta) {
-  if (!meta) return {};
-  if (typeof meta === 'string') {
-    try { return JSON.parse(meta); } catch { return {}; }
-  }
-  return meta;
-}
-
 // SMS conversations for the signed-in customer, read from the shared
 // conversations/messages tables (persisted by the SMS webhook).
 export async function GET() {
@@ -30,7 +22,7 @@ export async function GET() {
                   'body', m.content,
                   'senderType', m.sender_type,
                   'createdAt', m.created_at,
-                  'metadata', m.metadata
+                  'hotLeadScore', m.hot_lead_score
                 ) ORDER BY m.created_at
               ) FILTER (WHERE m.id IS NOT NULL), '[]') AS msgs,
               MAX(m.created_at) AS last_message_at
@@ -45,15 +37,12 @@ export async function GET() {
 
     let totalMessages = 0;
     const conversations = result.rows.map(row => {
-      const msgs = (Array.isArray(row.msgs) ? row.msgs : []).map(m => {
-        const meta = parseMeta(m.metadata);
-        return {
-          body: m.body,
-          direction: m.senderType === 'user' ? 'inbound' : 'outbound',
-          hotLeadScore: meta.hotLeadScore || 0,
-          timestamp: m.createdAt,
-        };
-      });
+      const msgs = (Array.isArray(row.msgs) ? row.msgs : []).map(m => ({
+        body: m.body,
+        direction: m.senderType === 'user' ? 'inbound' : 'outbound',
+        hotLeadScore: m.hotLeadScore || 0,
+        timestamp: m.createdAt,
+      }));
       totalMessages += msgs.length;
       return {
         id: row.id,
