@@ -24,8 +24,9 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'No active number found' }, { status: 404 });
     }
 
-    // Already submitted or approved — nothing to retry.
-    if (number.tfv_status && !['needs_info'].includes(number.tfv_status)) {
+    // Already submitted or approved — nothing to retry. Rejected
+    // verifications CAN be retried (edited in place within Twilio's window).
+    if (number.tfv_status && !['needs_info', 'TWILIO_REJECTED'].includes(number.tfv_status)) {
       return NextResponse.json({
         success: true,
         alreadySubmitted: true,

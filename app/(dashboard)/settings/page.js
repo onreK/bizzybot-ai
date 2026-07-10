@@ -192,6 +192,15 @@ export default function SettingsPage() {
           });
         }
       }
+
+      // Business email lives with the SMS verification info, not the profile
+      const infoResponse = await fetch('/api/sms/verification-info');
+      if (infoResponse.ok) {
+        const info = await infoResponse.json();
+        if (info.businessEmail) {
+          setBusinessProfile(prev => ({ ...prev, businessEmail: info.businessEmail }));
+        }
+      }
     } catch (error) {
       console.error('Error loading business profile:', error);
     }
@@ -309,8 +318,40 @@ export default function SettingsPage() {
       });
 
       const data = await response.json().catch(() => ({}));
-      if (response.ok && data.success) {
+
+      // Business email is stored with the SMS verification info (Twilio's
+      // toll-free verification reads it from there). Merge it into the
+      // existing record — the POST requires the full set of fields.
+      let emailError = null;
+      const businessEmail = (businessProfile.businessEmail || '').trim();
+      try {
+        const infoResponse = await fetch('/api/sms/verification-info');
+        const info = infoResponse.ok ? await infoResponse.json() : null;
+        if (info?.businessType && businessEmail !== (info.businessEmail || '')) {
+          const emailResponse = await fetch('/api/sms/verification-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              businessType: info.businessType,
+              ein: info.ein,
+              contactFirstName: info.contactFirstName,
+              contactLastName: info.contactLastName,
+              businessEmail,
+            }),
+          });
+          const emailData = await emailResponse.json().catch(() => ({}));
+          if (!emailResponse.ok || !emailData.success) {
+            emailError = emailData.error || 'Business email failed to save';
+          }
+        }
+      } catch (e) {
+        emailError = 'Business email failed to save';
+      }
+
+      if (response.ok && data.success && !emailError) {
         setMessage({ type: 'success', text: 'Business profile updated successfully!' });
+      } else if (response.ok && data.success && emailError) {
+        setMessage({ type: 'error', text: `Profile saved, but: ${emailError}` });
       } else {
         setMessage({ type: 'error', text: data.details ? `Failed to update: ${data.details}` : 'Failed to update business profile' });
       }
