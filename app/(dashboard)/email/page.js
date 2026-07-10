@@ -906,6 +906,27 @@ export default function CompleteEmailSystem() {
     }
   };
 
+  // One-tap live check across BOTH providers: triggers the Outlook monitor
+  // (same job the hourly cron runs) + Gmail check, then reloads the inbox.
+  const checkAllEmails = async () => {
+    setGmailLoading(true);
+    try {
+      const jobs = [
+        fetch('/api/outlook/monitor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'check' }),
+        }).catch(() => {}),
+      ];
+      if (gmailConnection) jobs.push(checkGmailEmails(true));
+      await Promise.all(jobs);
+      await fetchOutlookEmails();
+      setLastRefresh(new Date());
+    } finally {
+      setGmailLoading(false);
+    }
+  };
+
   const fetchOutlookEmails = async () => {
     try {
       const res = await fetch('/api/outlook/inbox');
@@ -1136,8 +1157,8 @@ export default function CompleteEmailSystem() {
               <span className="text-xs text-gray-500 mr-2">
                 Last refreshed: {lastRefresh.toLocaleTimeString()}
               </span>
-              <Button 
-                onClick={() => checkGmailEmails(false)}
+              <Button
+                onClick={checkAllEmails}
                 disabled={gmailLoading}
                 size="sm"
                 variant="outline"
@@ -1292,7 +1313,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-blue-500/20 text-blue-300'
                       }`}>
-                        {gmailEmails.length}
+                        {gmailEmails.length + outlookEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'inbox' && (
@@ -1316,7 +1337,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-green-500/20 text-green-300'
                       }`}>
-                        {sentEmails.length + outlookEmails.length}
+                        {sentEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'sent' && (
@@ -1393,37 +1414,33 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {gmailEmails.length === 0 ? (
+                    {(gmailEmails.length === 0 && outlookEmails.length === 0) ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
                           <Mail className="w-8 h-8 text-blue-400" />
                         </div>
                         <h4 className="text-lg font-medium text-white mb-2">No emails yet</h4>
                         <p className="text-gray-400 text-center max-w-sm">
-                          {gmailConnection 
-                            ? 'New emails will appear here automatically when received'
-                            : 'Connect Gmail to start monitoring your emails'
-                          }
+                          New emails will appear here — use Check for emails for an instant sweep
                         </p>
-                        {gmailConnection && (
-                          <Button 
-                            onClick={() => checkGmailEmails(false)}
-                            disabled={gmailLoading}
-                            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            {gmailLoading ? (
-                              <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                            )}
-                            Check for emails
-                          </Button>
-                        )}
+                        <Button
+                          onClick={checkAllEmails}
+                          disabled={gmailLoading}
+                          className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {gmailLoading ? (
+                            <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          Check for emails
+                        </Button>
                       </div>
                     ) : (
                       <div className="space-y-0">
                         {[
                           ...gmailEmails.map(e => ({ ...e, source: 'gmail' })),
+                          ...outlookEmails.map(e => ({ ...e, source: 'outlook' })),
                         ]
                           .sort((a, b) => new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0))
                           .map((email, index) => {
@@ -1519,7 +1536,7 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {(sentEmails.length === 0 && outlookEmails.length === 0) ? (
+                    {sentEmails.length === 0 ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
                           <Send className="w-8 h-8 text-green-400" />
@@ -1577,37 +1594,6 @@ export default function CompleteEmailSystem() {
                               <div className="text-xs text-gray-500">
                                 to {sentEmail.to.split('@')[1] || 'unknown'}
                               </div>
-                            </div>
-                          </div>
-                        ))}
-                        {outlookEmails.map((email) => (
-                          <div
-                            key={email.id}
-                            className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-all duration-200 ${
-                              selectedOutlookEmail?.id === email.id ? 'bg-green-500/20 border-l-4 border-l-green-400 shadow-lg' : ''
-                            }`}
-                            onClick={() => {
-                              setSelectedGmailEmail(null);
-                              setSelectedConversation(null);
-                              setSelectedOutlookEmail(email);
-                            }}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-sm text-white truncate flex-1 mr-2">
-                                To: {email.fromName || email.fromEmail}
-                              </h4>
-                              <div className="flex items-center gap-2">
-                                <div className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium">Outlook</div>
-                                <div className="px-2 py-1 rounded-full bg-green-500/20 text-green-300 text-xs font-medium">Sent</div>
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-300 mb-1 truncate">Re: {email.subject}</p>
-                            <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
-                              {(email.aiReply || '').substring(0, 100)}...
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-500">{email.receivedTime}</p>
-                              <div className="text-xs text-gray-500">to {email.fromEmail?.split('@')[1] || 'unknown'}</div>
                             </div>
                           </div>
                         ))}
