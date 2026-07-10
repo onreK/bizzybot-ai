@@ -25,7 +25,9 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  DollarSign
+  DollarSign,
+  UserPlus,
+  X
 } from 'lucide-react';
 
 export default function LeadsPage() {
@@ -43,6 +45,10 @@ export default function LeadsPage() {
   const [stageFilter, setStageFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [sortDir, setSortDir] = useState('desc');
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [addLeadForm, setAddLeadForm] = useState({ name: '', phone: '', email: '', company: '', notes: '' });
+  const [addingLead, setAddingLead] = useState(false);
+  const [addLeadError, setAddLeadError] = useState('');
   const [channelFilter, setChannelFilter] = useState('all');
 
   // Pagination states
@@ -360,14 +366,138 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-white">Lead Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track and manage all your potential customers</p>
         </div>
-        <button
-          onClick={fetchLeads}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-gray-800"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchLeads}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-gray-800"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </button>
+          <button
+            onClick={() => { setAddLeadError(''); setShowAddLead(true); }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-white bg-violet-600 hover:bg-violet-700 transition-all"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Add Lead
+          </button>
+        </div>
       </div>
+
+      {/* Add Lead modal */}
+      {showAddLead && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAddLead(false)}>
+          <div className="bg-[#161B22] border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-violet-400" />
+                Add Lead
+              </h3>
+              <button onClick={() => setShowAddLead(false)} className="text-gray-500 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Name *</label>
+                <input
+                  value={addLeadForm.name}
+                  onChange={e => setAddLeadForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Jane Smith"
+                  className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Phone</label>
+                  <input
+                    value={addLeadForm.phone}
+                    onChange={e => setAddLeadForm(f => ({ ...f, phone: e.target.value }))}
+                    placeholder="(555) 123-4567"
+                    className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={addLeadForm.email}
+                    onChange={e => setAddLeadForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="jane@email.com"
+                    className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Company</label>
+                <input
+                  value={addLeadForm.company}
+                  onChange={e => setAddLeadForm(f => ({ ...f, company: e.target.value }))}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Notes</label>
+                <textarea
+                  value={addLeadForm.notes}
+                  onChange={e => setAddLeadForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="Where did this lead come from? What do they need?"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500 resize-none"
+                />
+              </div>
+
+              {addLeadError && (
+                <p className="text-red-400 text-xs flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {addLeadError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={async () => {
+                    setAddLeadError('');
+                    setAddingLead(true);
+                    try {
+                      const res = await fetch('/api/customer/leads/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(addLeadForm),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && data.success) {
+                        setShowAddLead(false);
+                        setAddLeadForm({ name: '', phone: '', email: '', company: '', notes: '' });
+                        fetchLeads();
+                      } else {
+                        setAddLeadError(data.error || 'Failed to add lead');
+                      }
+                    } catch {
+                      setAddLeadError('Failed to add lead — please try again');
+                    } finally {
+                      setAddingLead(false);
+                    }
+                  }}
+                  disabled={addingLead}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-all"
+                >
+                  {addingLead ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Add Lead
+                </button>
+                <button
+                  onClick={() => setShowAddLead(false)}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-800 rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         {/* Stats Cards */}
