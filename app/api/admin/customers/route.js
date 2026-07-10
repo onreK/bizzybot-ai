@@ -13,8 +13,11 @@ async function isAdmin(userId) {
   if (ADMIN_USER_IDS.includes(userId)) return true;
   try {
     const res = await query('SELECT email FROM customers WHERE clerk_user_id = $1 LIMIT 1', [userId]);
-    const email = res.rows[0]?.email || '';
-    return email === process.env.ADMIN_EMAIL || email === 'kernopay@gmail.com' || email.includes('@bizzybotai.com');
+    const email = (res.rows[0]?.email || '').toLowerCase();
+    // Anchored domain match — a substring check would grant admin to e.g.
+    // "x@bizzybotai.com.evil.com"
+    const domain = email.split('@')[1] || '';
+    return email === (process.env.ADMIN_EMAIL || '').toLowerCase() || email === 'kernopay@gmail.com' || domain === 'bizzybotai.com';
   } catch (_) {
     return false;
   }
