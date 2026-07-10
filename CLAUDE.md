@@ -281,6 +281,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 11. [ ] Launch prep (founding customers, BIZZYFOUNDER coupon) — the solar demo IS the first founding-customer conversation.
 
 **Product gaps / decisions parked:**
+- **Unit Economics panel uses conservative estimated rates** (founder-confirmed 2026-07-10: shown margins are likely LOWER than actual). Rates live in `UNIT_RATES` in app/api/admin/usage-costs/route.js — reconcile against real Twilio + Vapi invoices after first months of customer traffic, then tune.
 - Settings page lacks Authorized Contact name fields (pre-07-06 customers can't save Business Email — server rejects partial verification info).
 - Bell scope decision: add AI-booked appointments + missed calls to notifications? (Recommended; ~15 min; founder undecided.)
 - Retroactively adding a late-collected email to an already-created calendar event (deferred from book-first-then-ask-email).

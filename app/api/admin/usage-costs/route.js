@@ -29,7 +29,11 @@ async function checkIsAdmin(userId) {
 // Current plan prices ($/mo). 'basic' is a legacy value equivalent to starter.
 const PLAN_PRICES = { starter: 29, basic: 29, professional: 69, business: 199 };
 
-// Rough unit rates ($)
+// Rough unit rates ($) — deliberately CONSERVATIVE (founder note 2026-07-10:
+// real margins are likely HIGHER than shown; e.g. smsExchange assumes ~2
+// segments avg, voiceMinute assumes every minute is an AI minute). Reconcile
+// against actual Twilio + Vapi invoices once real customer traffic exists,
+// then tune these numbers.
 const UNIT_RATES = {
   numberRental: 2.15,      // toll-free number, flat per month
   smsExchange: 0.025,      // lead text + AI reply incl. carrier fees (~2 segments avg)
