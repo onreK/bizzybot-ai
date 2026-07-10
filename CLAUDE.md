@@ -301,6 +301,20 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ## Session Log
 
+### Session — 2026-07-09/10 (TFV approved · business email · SMS channel fully live)
+
+- **TFV REJECTED → RESUBMITTED → ✅ APPROVED same day.** Rejection reason: business email must be official domain (was Gmail). Fixed via edit-in-place resubmit (same HH sid keeps priority queue spot — approval came ~1hr after edit). (866) 944-5685 now sends/receives SMS. Code: Settings Business Email field wired (was dead input), rejected-TFV edit path in lib/tollfree-verification.js (`editSid` → POST to instance URL, TollfreePhoneNumberSid is create-only), retry route accepts TWILIO_REJECTED, hourly duplicate admin rejection emails stopped.
+- **"Number rings busy" mystery:** founder called toll-free from the same cell "ring my phone first" forwards to → own phone busy. Not an outage. Voice + TFV are independent; rejection never affected calls.
+- **Business email created: Drayke@bizzybotai.com** on Microsoft 365 Business Basic (trial → $8.40/mo; tenant BizzyBotAI.onmicrosoft.com; signup created a duplicate user — deleted, original admin renamed). DNS at Namecheap: MX → Microsoft (MAIL SETTINGS Private Email → Custom MX; old unused privateemail routing auto-removed), SPF, autodiscover, DKIM selector1/2 CNAMEs, DMARC `_dmarc` p=none. ⏳ **DKIM enable toggle still pending Microsoft-side sync** — retry at security.microsoft.com/authentication?viewid=DKIM. Contact name on file w/ Twilio: legal "Drayke Adams" / "Kern".
+- **Vapi had hijacked SMS:** number's SmsUrl pointed at api.vapi.ai/twilio/sms (set during Vapi number import) → inbound texts silently swallowed. Repointed to /api/sms/webhook + ensureVoiceRouting now reclaims SmsUrl on every provision/call-settings save.
+- **SMS persistence was 100% broken** (schema-mismatch, silently caught): conversations insert omitted NOT NULL conversation_key+source; messages insert used nonexistent `metadata` col + missing required user_id; reader selected `metadata` too (the old sms/conversations 500). All fixed against real prod schema (verified via rolled-back dry-runs). **SMS page: conversation rows now expand (chevron) into full chat threads.**
+- **Phantom `event_data`/`event_value` columns purged** (migration renamed event_data→metadata long ago; 6 code paths still wrote/read the old name, all silently failing): ai-service appointment_booked + document_sent, scheduling GET aiBookings (why "Booked by your AI" was always empty), leads-service captureInboundMessage, widget chat events, behavior-analyzer, database.js logAIEvent + CREATE TABLE. Lost 2pm booking event backfilled by hand.
+- **Live-verified end-to-end:** SMS → AI reply (pricing + clickable site link) → conversation persisted → lead captured+scored (80/10 hot) → **AI booked a real appointment via SMS** ("book me 7/10 at 2pm" → real Outlook event, founder saw it on his calendar).
+- **Outlook: Disconnect button added** (+ POST /api/auth/outlook/disconnect, marks rows 'disconnected') and OAuth prompt consent→select_account (browser session was silently reconnecting the old account). Founder connected Drayke@bizzybotai.com.
+- **Scheduling upgrades:** per-customer **Meeting Length** setting (15/30/45/60, customers.meeting_duration_minutes, used in slots + event creation); event titles/body identify lead by name→phone→email; **book-first-then-ask-email** (founder decision: never gate booking on email; worst case we have the phone).
+- **Product gap noted:** Settings page has no Authorized Contact name fields (pre-07-06 customers have NULL contact names in sms_verification_info → their Business Email save is blocked server-side; founder's row fixed by direct DB update).
+- **NEXT: demo with a real business** — tune test account's AI Settings to their industry; retest first-message genericness (first SMS reply was generic, second was perfect); DKIM toggle; voice test from a non-forwarded phone; email AI reply live test on Drayke@bizzybotai.com.
+
 ### Session — 2026-07-07 (evening #2)
 **FINAL DEEP DIVE (Launch Checklist item 10) — all 4 subsystems audited against prod DB + fixed**
 
