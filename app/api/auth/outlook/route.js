@@ -34,7 +34,10 @@ export async function GET() {
       redirect_uri: `${BASE_URL}/api/auth/outlook/callback`,
       scope: SCOPES,
       state: nonce,
-      prompt: 'consent',
+      // Always show the account picker: the browser may hold a Microsoft
+      // session for a different account than the one being connected.
+      // (First-time scopes still trigger the consent screen afterwards.)
+      prompt: 'select_account',
       response_mode: 'query',
     });
 

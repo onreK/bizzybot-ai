@@ -89,6 +89,29 @@ export default function ConnectionsTab() {
     window.location.href = '/api/auth/outlook';
   };
 
+  const disconnectOutlook = async () => {
+    if (!confirm('Are you sure you want to disconnect your Outlook account?')) {
+      return;
+    }
+
+    try {
+      setLoadingOutlook(true);
+      const response = await fetch('/api/auth/outlook/disconnect', { method: 'POST' });
+      if (response.ok) {
+        setOutlookConnection({ connected: false, email: '' });
+        if (activeConnection === 'outlook') setActiveConnection(gmailConnection.connected ? 'gmail' : 'none');
+        setMessage({ type: 'success', text: 'Outlook disconnected successfully!' });
+      } else {
+        setMessage({ type: 'error', text: 'Failed to disconnect Outlook. Please try again.' });
+      }
+    } catch (error) {
+      console.error('Error disconnecting Outlook:', error);
+      setMessage({ type: 'error', text: 'Error disconnecting Outlook. Please try again.' });
+    } finally {
+      setLoadingOutlook(false);
+    }
+  };
+
   const disconnectGmail = async () => {
     if (!confirm('Are you sure you want to disconnect your Gmail account?')) {
       return;
@@ -329,6 +352,20 @@ export default function ConnectionsTab() {
               >
                 {loadingOutlook ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 Reconnect
+              </Button>
+
+              <Button
+                onClick={disconnectOutlook}
+                disabled={loadingOutlook}
+                variant="outline"
+                className="flex items-center gap-2 text-red-300 border-red-500/30 hover:bg-red-500/20"
+              >
+                {loadingOutlook ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Shield className="w-4 h-4" />
+                )}
+                Disconnect
               </Button>
             </div>
           </div>
