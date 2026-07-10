@@ -10,7 +10,8 @@ async function ensureColumn() {
     ALTER TABLE customers
     ADD COLUMN IF NOT EXISTS booking_url TEXT,
     ADD COLUMN IF NOT EXISTS booking_auto_send BOOLEAN DEFAULT true,
-    ADD COLUMN IF NOT EXISTS business_timezone TEXT
+    ADD COLUMN IF NOT EXISTS business_timezone TEXT,
+    ADD COLUMN IF NOT EXISTS meeting_duration_minutes INTEGER DEFAULT 60
   `);
 }
 
@@ -22,7 +23,7 @@ export async function GET() {
     await ensureColumn();
 
     const result = await query(
-      'SELECT id, booking_url, booking_auto_send, business_timezone FROM customers WHERE clerk_user_id = $1',
+      'SELECT id, booking_url, booking_auto_send, business_timezone, meeting_duration_minutes FROM customers WHERE clerk_user_id = $1',
       [userId]
     );
 
@@ -56,6 +57,7 @@ export async function GET() {
       booking_url: row.booking_url || '',
       booking_auto_send: row.booking_auto_send !== false, // default true
       business_timezone: row.business_timezone || 'America/New_York',
+      meeting_duration_minutes: row.meeting_duration_minutes || 60,
       aiBookings,
     });
   } catch (error) {
@@ -69,7 +71,7 @@ export async function POST(req) {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { booking_url, booking_auto_send, business_timezone } = await req.json();
+    const { booking_url, booking_auto_send, business_timezone, meeting_duration_minutes } = await req.json();
 
     await ensureColumn();
 
@@ -80,12 +82,18 @@ export async function POST(req) {
     ];
     const tz = VALID_TIMEZONES.includes(business_timezone) ? business_timezone : null;
 
+    // Only the durations we present in the UI
+    const VALID_DURATIONS = [15, 30, 45, 60];
+    const duration = VALID_DURATIONS.includes(Number(meeting_duration_minutes))
+      ? Number(meeting_duration_minutes) : null;
+
     await query(
       `UPDATE customers
        SET booking_url = $1, booking_auto_send = $2,
-           business_timezone = COALESCE($3, business_timezone), updated_at = NOW()
-       WHERE clerk_user_id = $4`,
-      [booking_url || null, booking_auto_send !== false, tz, userId]
+           business_timezone = COALESCE($3, business_timezone),
+           meeting_duration_minutes = COALESCE($4, meeting_duration_minutes), updated_at = NOW()
+       WHERE clerk_user_id = $5`,
+      [booking_url || null, booking_auto_send !== false, tz, duration, userId]
     );
 
     console.log(`✅ Scheduling settings saved for user ${userId}`);

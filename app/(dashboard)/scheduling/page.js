@@ -174,7 +174,7 @@ function WeekGrid({ events, slots, tz }) {
 }
 
 export default function SchedulingPage() {
-  const [scheduling, setScheduling] = useState({ booking_url: '', booking_auto_send: true, business_timezone: 'America/New_York' });
+  const [scheduling, setScheduling] = useState({ booking_url: '', booking_auto_send: true, business_timezone: 'America/New_York', meeting_duration_minutes: 60 });
   const [aiBookings, setAiBookings] = useState([]);
   const [outlook, setOutlook] = useState({ connected: false, email: '' });
   const [slots, setSlots] = useState([]);
@@ -219,6 +219,7 @@ export default function SchedulingPage() {
             booking_url: data.booking_url || '',
             booking_auto_send: data.booking_auto_send !== false,
             business_timezone: data.business_timezone || 'America/New_York',
+            meeting_duration_minutes: data.meeting_duration_minutes || 60,
           });
           setAiBookings(data.aiBookings || []);
         }
@@ -400,6 +401,21 @@ export default function SchedulingPage() {
             </select>
             <p className="text-gray-500 text-xs mt-2">
               The AI offers times between 9 AM and 5 PM in this timezone.
+            </p>
+
+            <label className="block text-sm font-medium text-gray-300 mb-2 mt-4">Meeting Length</label>
+            <select
+              value={scheduling.meeting_duration_minutes}
+              onChange={e => setScheduling(s => ({ ...s, meeting_duration_minutes: Number(e.target.value) }))}
+              className="w-full px-4 py-2.5 bg-[#0D1117] border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
+            >
+              <option value={15}>15 minutes</option>
+              <option value={30}>30 minutes</option>
+              <option value={45}>45 minutes</option>
+              <option value={60}>1 hour</option>
+            </select>
+            <p className="text-gray-500 text-xs mt-2">
+              How long each appointment the AI books runs on your calendar.
             </p>
           </div>
 
