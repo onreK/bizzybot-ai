@@ -55,6 +55,7 @@ export async function GET() {
     const result = await query(`
       SELECT
         c.id, c.business_name, c.email, c.plan,
+        (c.stripe_subscription_id IS NOT NULL) AS is_paying,
         COALESCE(sms.exchanges, 0)      AS sms_exchanges,
         COALESCE(inbound.total, 0)      AS inbound_total,
         COALESCE(voice.minutes, 0)      AS voice_minutes,
@@ -89,7 +90,9 @@ export async function GET() {
     `);
 
     const customers = result.rows.map(row => {
-      const price = PLAN_PRICES[row.plan] || 0;
+      // Revenue only counts when there's a real Stripe subscription —
+      // trial/test accounts cost money but earn nothing (the truth).
+      const price = row.is_paying ? (PLAN_PRICES[row.plan] || 0) : 0;
       const smsExchanges = parseInt(row.sms_exchanges);
       const inboundTotal = parseInt(row.inbound_total);
       const voiceMinutes = parseInt(row.voice_minutes);
@@ -106,7 +109,7 @@ export async function GET() {
         id: row.id,
         businessName: row.business_name || '(no name)',
         email: row.email,
-        plan: row.plan || 'none',
+        plan: row.is_paying ? (row.plan || 'none') : `${row.plan || 'none'} (unpaid)`,
         price,
         usage: { smsExchanges, voiceMinutes, inboundTotal },
         costs: {
