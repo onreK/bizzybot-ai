@@ -257,45 +257,34 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — 2026-07-08)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-10, pre-demo)
 
-**Email channel — verify the fixes from 2026-07-07 (top priority):**
-1. [ ] **Reconnect the test Gmail (kernojunk)** via Connections tab — the old connection used the pre-secure-OAuth flow (broken/anonymous id). Reconnecting stores the correct account id so config loads via the primary path, not the fallback.
-2. [ ] Send a **fresh Gmail test email** → confirm: replies **exactly once** (no duplicate loop), uses **real business info** (not "My Business"), **no `[placeholders]`**.
-3. [ ] Send a **fresh Outlook test email** → confirm still replies once with correct info (Outlook was already good; the claim-then-send dedup is new).
-4. [ ] Confirm the unified email inbox shows both Gmail (red tag) + Outlook (blue tag) correctly.
+**First: how did the solar demo go?** Capture feedback + feature asks in the session log.
 
-**SMS:**
-5. [ ] Check Twilio toll-free verification status for (866) 944-5685 (submitted 2026-07-06, ~3-5 biz days → likely ready ~07-09/07-11). Once "Verified," **text the number** to test SMS AI end-to-end. (SMS text AI uses the same OpenAI key as email — confirm it's funded.)
+**Post-demo cleanup:**
+1. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (see memory: demo-solar-persona). Keep hot_lead_detection=true.
+2. [ ] **DKIM toggle** — security.microsoft.com/authentication?viewid=DKIM → bizzybotai.com → Enable (was blocked on Microsoft-side key sync 07-10; CNAMEs verified live). Until then first-contact emails may hit spam.
 
-**Call forwarding:**
-5b. [x] **LIVE-VERIFIED 2026-07-08 by founder**: "Ring my phone first" works — cell rings first, AI picks up on no-answer. Still unconfirmed: the **email** missed-lead alert on ring-out (check inbox next test); missed-call **text** still waits on toll-free SMS verification (item 5).
+**Verification still owed (fast):**
+3. [ ] **Voice test from a NON-forwarded phone** (not 858-900-4220): cell rings ~18s → AI answers as Sunrise Solar → missed-call **text** alert now deliverable (TFV approved) + email alert.
+4. [ ] **Fresh hot-lead SMS** post-dd2bc5d deploy: high-intent text → bell shows the lead, SMS Hot Lead Alerts card fills, Leads shows hot. Also flip **Hot Lead Alerts toggle ON** (SMS page) to test owner text+email alert.
+5. [ ] **Add Lead** live test: manual lead appears at top; adding an existing texter's number merges (no duplicate).
+6. [ ] **First-SMS-reply genericness**: first reply to a brand-new texter was generic ("How can I help?") while the second was perfect — trace config load on first contact.
 
-**Console errors — ALL FIXED 2026-07-07 evening:**
-6. [x] chat 405s → /api/chat now has a GET handler (conversations + test-connection)
-7. [x] sms/conversations 500 → rewritten (see SMS persistence in session log)
-8. [x] social stats 404s → Overview now calls the real /api/{facebook,instagram}/status+stats
+**Gmail (still pre-launch "coming soon", lower priority):**
+7. [ ] Reconnect test Gmail (kernojunk) on the secure OAuth flow → fresh test → exactly one reply, real info, no placeholders. Gmail hot-lead path also still uses 'email_received' (never promotes to hot) — mirror the hot_lead fix when touching it.
 
-**Mobile check (built 2026-07-07 — needs a real-phone test):**
-8b. [ ] Open bizzybotai.com/dashboard on an actual phone: hamburger opens/closes the sidebar drawer, pages navigate, bell works. Check the **Email page** especially (split inbox is the tightest fit on small screens; may need a mobile-specific pass before launch).
+**Carried forward (unchanged):**
+8. [ ] Mobile real-phone check (hamburger/bell/Email split inbox).
+9. [ ] Web-chat widget embed on a real external HTML page (persistence schema now fixed 07-10 — retest end-to-end).
+10. [ ] Analytics page sanity on prod ("Booked by your AI" + Appointments should now tick — events fixed 07-10).
+11. [ ] Launch prep (founding customers, BIZZYFOUNDER coupon) — the solar demo IS the first founding-customer conversation.
 
-**Deep-dive fixes (deployed 2026-07-07 — need live tests):**
-8c. [ ] **Web-chat widget embed** (rebuilt from scratch — never live-tested): drop `<script src="https://bizzybotai.com/api/widget/<clerk_user_id>/widget.js"></script>` into any plain HTML page (or the embed code from /web-chat), confirm: bubble renders → visitor gets AI replies → typing an email/phone creates a contact in Leads → conversation shows on the dashboard Web Chat list.
-8d. [ ] **Analytics page** on prod: numbers should now be believable (no 26k interactions); trend chart reads oldest→newest; Hot Leads/Phone Requests non-zero for the test account on "All Time".
-8e. [ ] **Outlook AI booking with correct timezone**: email the connected test account asking to schedule → AI should offer slots labeled ET ("2:00 PM EDT"), and after confirming, the calendar event should land at the right local time with an invite. Also verify the Appointments card ticks up (appointment_booked event).
-8f. [ ] When the SMS test happens (item 5), also confirm the texter shows up under **Leads** (SMS lead capture is new).
-
-**Then resume launch checklist:**
-9. [x] Item 6 — landing page pass DONE 2026-07-08 (`79137a8`): voice-first hero, 6-feature grid (Voice first + Scheduling), Industries section (trades/real estate/salons/clinics) replacing fake testimonials, founding-customer strip (BIZZYFOUNDER 50%/12mo) replacing "500+ businesses" + fake stats, FB/IG marked coming soon
-10. [x] **FINAL DEEP DIVE — DONE 2026-07-07** (`f2f94e1`, `e9cec16`, `a885187`, `29792fa`): all 4 subsystems audited against prod DB + fixed. See session log. Highlights: Analytics counted dead event names + 26k duplicate gmail rows (deleted, user-approved); SMS/web-chat never created leads (web-chat embed was fully broken for customer sites — rebuilt); Outlook AI booking had a UTC timezone bug offering 5am ET slots (fixed, business-local); document sends now tracked. **DECIDED 2026-07-07: Calendly stays link-only** (AI autosends booking_url; full OAuth integration only if founding customers ask — API can't book on invitee's behalf anyway, so max is one-tap prefilled confirm link).
-11. [ ] Item 7 — launch prep (founding customers, BIZZYFOUNDER coupon)
-
-**Nice-to-haves:**
-- "Check now" button for Outlook (currently console/hourly-cron triggered)
-- Sidebar plan/usage card ("Starter · 112/300 responses · Upgrade") pinned above Sign Out (~30 min incl. usage endpoint)
-- ~~Audit which channels log to ai_analytics_events~~ DONE 2026-07-07 in the deep dive — every channel now logs real inbound events
-- Mobile padding polish (pages use p-8 everywhere; p-4 on phones would breathe better)
-- "Apply to all channels" option for Documents in AI Settings (currently configured per channel)
+**Product gaps / decisions parked:**
+- Settings page lacks Authorized Contact name fields (pre-07-06 customers can't save Business Email — server rejects partial verification info).
+- Bell scope decision: add AI-booked appointments + missed calls to notifications? (Recommended; ~15 min; founder undecided.)
+- Retroactively adding a late-collected email to an already-created calendar event (deferred from book-first-then-ask-email).
+- Nice-to-haves: sidebar plan/usage card · mobile padding polish · "Apply to all channels" for Documents.
 
 ---
 
@@ -313,7 +302,11 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 - **Outlook: Disconnect button added** (+ POST /api/auth/outlook/disconnect, marks rows 'disconnected') and OAuth prompt consent→select_account (browser session was silently reconnecting the old account). Founder connected Drayke@bizzybotai.com.
 - **Scheduling upgrades:** per-customer **Meeting Length** setting (15/30/45/60, customers.meeting_duration_minutes, used in slots + event creation); event titles/body identify lead by name→phone→email; **book-first-then-ask-email** (founder decision: never gate booking on email; worst case we have the phone).
 - **Product gap noted:** Settings page has no Authorized Contact name fields (pre-07-06 customers have NULL contact names in sms_verification_info → their Business Email save is blocked server-side; founder's row fixed by direct DB update).
-- **NEXT: demo with a real business** — tune test account's AI Settings to their industry; retest first-message genericness (first SMS reply was generic, second was perfect); DKIM toggle; voice test from a non-forwarded phone; email AI reply live test on Drayke@bizzybotai.com.
+- **Email dashboard fixed for demo (0171968):** Outlook emails were only rendered in the SENT tab (Inbox merge never included them — Inbox 0 / Sent 6). Inbox now merges Gmail+Outlook by time; Sent = sent responses only. **Refresh + "Check for emails" now run `checkAllEmails`** — triggers the Outlook monitor (session-auth) + Gmail check on demand, so email replies are demoable live instead of waiting for the hourly cron. Outlook email AI reply live-verified (cron `processed: 1` for Drayke@bizzybotai.com).
+- **Hot leads now actually promote contacts (dd2bc5d):** detection only ever sent the owner alert; nothing recorded the `hot_lead` event that bumps hot_lead_count → rescore → temperature 'hot' → notification bell (bell reads hot contacts, last 14 days). SMS + Outlook + web chat now track hot_lead on detection (Outlook's old updateLeadScoring call passed wrong args, silently failed). Web-chat widget persistence had the same phantom-schema inserts as SMS — fixed. 80/10 SMS lead promoted by hand in prod.
+- **Leads page (164d0eb, 614851f):** sort direction was inverted (default showed OLDEST activity first while displaying a desc arrow) — fixed, newest activity first. **New "Add Lead" button + modal** → POST /api/customer/leads/create runs manual leads through the same contact pipeline (dedupes by phone/email, channel 'manual', activity event) — feature requested by the demo prospect.
+- **Demo persona (DB-only, no commit):** all 6 ai_channel_settings rows for customer 863 re-skinned to **"Sunrise Solar"** (solar pricing/process/FAQs knowledge base, book-free-site-assessment instructions) + **hot_lead_detection flipped TRUE on all channels (was false everywhere)** + customers.business_name → 'Sunrise Solar' (**REVERT to 'Bizzy Bot Ai LLC' after demo phase**). Vapi voice needs AI Settings → Voice → Save & Sync to pick it up.
+- **NEXT: solar-company demo (2026-07-10 evening)** — dry-run script: high-intent text → hot lead + bell; "book me tomorrow 10am" → Sunrise Solar calendar event at configured meeting length; call from non-forwarded phone; email + dashboard Refresh for live reply. Still open: first-SMS-reply genericness, DKIM toggle, Gmail re-verify.
 
 ### Session — 2026-07-07 (evening #2)
 **FINAL DEEP DIVE (Launch Checklist item 10) — all 4 subsystems audited against prod DB + fixed**
