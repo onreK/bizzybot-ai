@@ -122,6 +122,7 @@ export default function AdminDashboard() {
   const [apiError, setApiError] = useState(null);
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
+  const [unitEconomics, setUnitEconomics] = useState(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -133,7 +134,10 @@ export default function AdminDashboard() {
     setLoading(true);
     setApiError(null);
     try {
-      const res = await fetch('/api/admin/customers');
+      const [res, costsRes] = await Promise.all([
+        fetch('/api/admin/customers'),
+        fetch('/api/admin/usage-costs'),
+      ]);
       if (res.status === 403) { setAccessDenied(true); return; }
       const data = await res.json();
       if (data.success) {
@@ -142,6 +146,8 @@ export default function AdminDashboard() {
       } else {
         setApiError(`${data.error} — ${data.details || ''}`);
       }
+      const costsData = await costsRes.json().catch(() => null);
+      if (costsData?.success) setUnitEconomics(costsData);
     } catch (err) {
       setApiError(`Network error: ${err.message}`);
     } finally {
@@ -240,6 +246,79 @@ export default function AdminDashboard() {
             <StatCard icon={AlertTriangle} label="Past Due"    value={summary.past_due}                      sub="Need attention" />
             <StatCard icon={TrendingUp}   label="Conversion"   value={`${summary.trial_conversion_rate}%`}  sub="Trial → paid" />
             <StatCard icon={Activity}     label="Total Signups" value={summary.total}                        sub="All time" />
+          </div>
+        )}
+
+        {/* Unit economics — usage costs + margins (this month) */}
+        {unitEconomics && (
+          <div className="mb-8 bg-[#0D1420] border border-[#1E2D40] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#1E2D40] flex items-center justify-between">
+              <div>
+                <h3 className="text-white text-sm font-semibold">Unit Economics — {unitEconomics.month}</h3>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  Estimated usage costs per customer (number rental, SMS, voice minutes, AI tokens, Stripe fees)
+                </p>
+              </div>
+              <div className="flex items-center gap-6 text-right">
+                <div>
+                  <p className="text-gray-500 text-[10px] uppercase tracking-wide">Est. Costs</p>
+                  <p className="text-white text-sm font-bold">${unitEconomics.totals.cost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-[10px] uppercase tracking-wide">Gross Margin</p>
+                  <p className="text-emerald-400 text-sm font-bold">
+                    ${unitEconomics.totals.margin.toLocaleString()}
+                    {unitEconomics.totals.marginPct !== null && (
+                      <span className="text-gray-500 font-normal ml-1">({unitEconomics.totals.marginPct}%)</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-gray-500 border-b border-[#1E2D40]">
+                    <th className="text-left px-5 py-2.5 font-medium">Customer</th>
+                    <th className="text-left px-3 py-2.5 font-medium">Plan</th>
+                    <th className="text-right px-3 py-2.5 font-medium">Revenue</th>
+                    <th className="text-right px-3 py-2.5 font-medium">SMS</th>
+                    <th className="text-right px-3 py-2.5 font-medium">Voice min</th>
+                    <th className="text-right px-3 py-2.5 font-medium">Number</th>
+                    <th className="text-right px-3 py-2.5 font-medium">Est. Cost</th>
+                    <th className="text-right px-5 py-2.5 font-medium">Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unitEconomics.customers
+                    .filter(c => c.price > 0 || c.costs.total > 0)
+                    .sort((a, b) => b.costs.total - a.costs.total)
+                    .slice(0, 15)
+                    .map(c => (
+                      <tr key={c.id} className="border-b border-[#1E2D40]/50 hover:bg-white/[0.02]">
+                        <td className="px-5 py-2.5">
+                          <span className="text-white">{c.businessName}</span>
+                          <span className="text-gray-600 ml-2">{c.email}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-400 capitalize">{c.plan}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-300">${c.price}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-400">
+                          {c.usage.smsExchanges} <span className="text-gray-600">(${c.costs.sms})</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-400">
+                          {c.usage.voiceMinutes} <span className="text-gray-600">(${c.costs.voice})</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-600">${c.costs.number}</td>
+                        <td className="px-3 py-2.5 text-right text-white font-medium">${c.costs.total}</td>
+                        <td className={`px-5 py-2.5 text-right font-medium ${c.margin >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          ${c.margin}
+                          {c.marginPct !== null && <span className="text-gray-600 font-normal ml-1">({c.marginPct}%)</span>}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

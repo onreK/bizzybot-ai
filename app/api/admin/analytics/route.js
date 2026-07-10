@@ -49,9 +49,9 @@ export async function GET(request) {
         COUNT(DISTINCT c.id) as total_customers,
         COUNT(DISTINCT CASE WHEN c.created_at >= $1 THEN c.id END) as new_customers,
         SUM(CASE
-          WHEN c.plan = 'starter' THEN 97
-          WHEN c.plan = 'professional' THEN 197
-          WHEN c.plan = 'enterprise' THEN 497
+          WHEN c.plan IN ('starter', 'basic') THEN 29
+          WHEN c.plan = 'professional' THEN 69
+          WHEN c.plan = 'business' THEN 199
           ELSE 0
         END) as monthly_recurring_revenue
       FROM customers c
@@ -120,11 +120,11 @@ export async function GET(request) {
       SELECT 
         c.plan,
         COUNT(*) as customer_count,
-        COUNT(*) * CASE 
-          WHEN c.plan = 'starter' THEN 97
-          WHEN c.plan = 'professional' THEN 197
-          WHEN c.plan = 'enterprise' THEN 497
-          ELSE 0 
+        COUNT(*) * CASE
+          WHEN c.plan IN ('starter', 'basic') THEN 29
+          WHEN c.plan = 'professional' THEN 69
+          WHEN c.plan = 'business' THEN 199
+          ELSE 0
         END as total_revenue
       FROM customers c
       WHERE c.created_at <= $2
