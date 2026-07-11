@@ -257,9 +257,11 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — updated 2026-07-10, pre-demo)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-10 late night)
 
-**First: how did the solar demo go?** Capture feedback + feature asks in the session log.
+**DEMO WENT WELL — solar company starting a free trial, likely converting.** Their feature ask (manual lead creation) shipped same-day (Add Lead button).
+
+**0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority before solar signs up):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. This is the final onboarding confidence check; everything code-side was audited + fixed 07-10 (see session log: Stripe webhook was broken 3 ways).
 
 **Post-demo cleanup:**
 1. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (see memory: demo-solar-persona). Keep hot_lead_detection=true.
@@ -290,6 +292,16 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 ---
 
 ## Session Log
+
+### Session — 2026-07-10 (late night: demo won · Stripe pipeline repaired · marketing Phase 0)
+
+- **Solar demo succeeded** — prospect starting a free trial. Their ask (manual lead creation) shipped same-day.
+- **🔴→✅ Stripe payment pipeline was broken THREE ways** (a paying customer would have stayed on trial and been locked out at day 14): (1) webhook plan detection used never-set env vars + an includes() fallback that can't match real price IDs → every purchase mapped to 'starter' (now resolves from PRICING_PLANS in lib/stripe.js); (2) webhook read session.metadata.userId but checkout writes clerkUserId → payment never matched a customer (now accepts both); (3) **no webhook endpoint existed in Stripe at all + STRIPE_WEBHOOK_SECRET unset in Railway** → founder registered "BizzyBot Payment" destination (4 events) in Stripe Workbench, secret set in Railway, redeployed. **Pipe verified live with synthetic signed events: valid signature → 200, tampered → 400.**
+- **Onboarding audit (rest was healthy):** Clerk user.created webhook → customers row (16/16 real signups clean); 14-day trial gate on /api/sms/provision correct; monthly response pool enforced in ai-service (fails open); checkout adds another 14-day Stripe trial after card entry. ⚠️ Voice minutes are displayed but NOT hard-enforced (deliberate for now — trial-friendly, small cost exposure; enforce post-launch).
+- **Marketing Phase 0 shipped + verified live:** metadata rewrite claiming "AI receptionist" category (+capture/score/nurture/book scope), sitemap.xml, robots.txt (AI crawlers welcomed), SoftwareApplication + FAQPage JSON-LD, hero badge/subheadline reworded, **brand 'BizzyBot AI' → 'BizzyBot'** on high-visibility surfaces (legal name unchanged; long-tail sweep parked), lifecycle strip section ("Most AI receptionists stop at answering — BizzyBot runs your whole front office": Answered→Captured→Scored→Booked→Followed up→Alerted), dashboard mockup URL fixed (showed unowned bizzybot.ai). Full marketing game plan (SEO/GEO/founder-led/paid) delivered in-session; founder to create Google Search Console + Bing Webmaster + Google Business Profile accounts.
+- **Admin Unit Economics panel** (+/api/admin/usage-costs): per-customer month-to-date usage costs (SMS/voice/number/OpenAI/Stripe est. rates — deliberately conservative, reconcile vs real invoices later) vs revenue; revenue counts only customers with a real Stripe subscription ('(unpaid)' tag otherwise). Fixed stale admin analytics MRR ($97/$197/$497+'enterprise' → $29/$69/$199+business). **Security fix all 3 admin routes: email admin check was substring (`includes('@bizzybotai.com')` — x@bizzybotai.com.evil.com would pass); now anchored domain match.**
+- **Email deliverability:** DKIM enabled + Valid (SPF+DKIM+DMARC complete). Outbound blocked by Microsoft new-tenant probation (550 5.7.708; Restricted entities empty — tenant-level, self-clears ~24-48h; support ticket if persists past 07-12). NDRs correctly filtered from BizzyBot inbox (automated-sender filter).
+- Scheduling: per-customer Meeting Length setting shipped earlier tonight; hot-lead bell fixes live.
 
 ### Session — 2026-07-09/10 (TFV approved · business email · SMS channel fully live)
 
