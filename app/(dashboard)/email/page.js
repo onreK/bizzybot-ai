@@ -107,6 +107,21 @@ export default function CompleteEmailSystem() {
 
   const [activeEmailView, setActiveEmailView] = useState('inbox');
   const [sentEmails, setSentEmails] = useState([]);
+
+  // Persistent sent view: every inbox email that carries an AI reply becomes
+  // a Sent item (survives refresh — the old list only held in-session sends)
+  const repliedSent = outlookEmails
+    .filter(e => e.aiReply)
+    .map(e => ({
+      id: `sent_${e.id}`,
+      toName: e.fromName,
+      to: e.fromEmail || '',
+      originalSubject: e.subject,
+      response: e.aiReply,
+      sentTime: e.receivedTime,
+      receivedAt: e.receivedAt,
+    }));
+  const allSentEmails = [...sentEmails, ...repliedSent];
   
   // UPDATED STATS - Only the 4 metrics you want
   const [stats, setStats] = useState({
@@ -1337,7 +1352,7 @@ export default function CompleteEmailSystem() {
                           ? 'bg-white/5 text-white' 
                           : 'bg-green-500/20 text-green-300'
                       }`}>
-                        {sentEmails.length}
+                        {allSentEmails.length}
                       </div>
                     </div>
                     {activeEmailView === 'sent' && (
@@ -1448,12 +1463,14 @@ export default function CompleteEmailSystem() {
                             const isSelected = isGmail
                               ? selectedGmailEmail?.id === email.id
                               : selectedOutlookEmail?.id === email.id;
+                            // Blue outline = the AI hasn't replied to this one yet
+                            const isUnreplied = !email.aiReply;
                             return (
                               <div
                                 key={email.id}
                                 className={`p-4 border-b border-white/5 cursor-pointer transition-all duration-200 hover:bg-white/5 ${
                                   isSelected ? 'bg-blue-500/20 border-l-4 border-l-blue-400 shadow-lg' : ''
-                                } ${index === 0 ? 'border-t-0' : ''}`}
+                                } ${!isSelected && isUnreplied ? 'ring-1 ring-inset ring-blue-400/60 rounded-lg' : ''} ${index === 0 ? 'border-t-0' : ''}`}
                                 onClick={() => {
                                   if (isGmail) {
                                     setSelectedGmailEmail(email);
@@ -1536,7 +1553,7 @@ export default function CompleteEmailSystem() {
                       }
                     `}</style>
                     
-                    {sentEmails.length === 0 ? (
+                    {allSentEmails.length === 0 ? (
                       <div className="p-8 text-center h-full flex flex-col items-center justify-center">
                         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
                           <Send className="w-8 h-8 text-green-400" />
@@ -1554,7 +1571,9 @@ export default function CompleteEmailSystem() {
                       </div>
                     ) : (
                       <div className="space-y-0">
-                        {sentEmails.map((sentEmail, index) => (
+                        {allSentEmails
+                          .sort((a, b) => new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0))
+                          .map((sentEmail, index) => (
                           <div
                             key={sentEmail.id}
                             className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-all duration-200 ${
