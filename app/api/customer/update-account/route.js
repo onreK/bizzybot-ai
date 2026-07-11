@@ -20,14 +20,17 @@ export async function POST(request) {
 
     // Parse the request body
     const body = await request.json();
-    const { 
-      firstName, 
-      lastName, 
+    const {
+      firstName,
+      lastName,
       username,
-      email 
+      phone,
     } = body;
 
     console.log('📝 Updating account for user:', user.id);
+
+    // Make sure the phone column exists on legacy databases
+    await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`).catch(() => {});
 
     // Update user information in Clerk
     try {
@@ -38,15 +41,6 @@ export async function POST(request) {
       if (username !== undefined) updateData.username = username;
       
       await clerkClient.users.updateUser(user.id, updateData);
-
-      // If email is being changed, update the primary email address
-      if (email && email !== user.emailAddresses[0]?.emailAddress) {
-        // Note: Email change requires verification in production
-        // This is a simplified version
-        console.log('📧 Email change requested:', email);
-        // You might want to trigger an email verification flow here
-      }
-
       console.log('✅ Clerk user updated successfully');
     } catch (clerkError) {
       console.error('❌ Error updating Clerk user:', clerkError);
@@ -57,21 +51,26 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // Update customer record in database
+    // Update customer record in database.
+    // SECURITY: customers.email is only ever synced from the VERIFIED Clerk
+    // email — never from user input. (It previously wrote whatever the form
+    // sent; customers.email feeds the admin-access check, so a user could
+    // type any @bizzybotai.com address and gain admin.)
     try {
-      const updateCustomerQuery = `
-        UPDATE customers 
-        SET 
-          email = COALESCE($1, email),
-          updated_at = NOW()
-        WHERE clerk_user_id = $2
-        RETURNING *
-      `;
-      
-      await query(updateCustomerQuery, [
-        email || user.emailAddresses[0]?.emailAddress,
-        user.id
-      ]);
+      const cleanPhone = phone !== undefined ? (String(phone).trim() || null) : undefined;
+      await query(
+        `UPDATE customers
+         SET email = COALESCE($1, email),
+             phone = CASE WHEN $2::boolean THEN $3 ELSE phone END,
+             updated_at = NOW()
+         WHERE clerk_user_id = $4`,
+        [
+          user.emailAddresses?.[0]?.emailAddress || null,
+          cleanPhone !== undefined,
+          cleanPhone !== undefined ? cleanPhone : null,
+          user.id,
+        ]
+      );
 
       console.log('✅ Database customer record updated');
     } catch (dbError) {
@@ -88,7 +87,7 @@ export async function POST(request) {
         firstName,
         lastName,
         username,
-        email
+        phone: phone !== undefined ? (String(phone).trim() || null) : undefined,
       }
     });
 
@@ -138,7 +137,8 @@ export async function GET() {
         twoFactorEnabled: user.twoFactorEnabled || false,
         createdAt: user.createdAt,
         lastSignInAt: user.lastSignInAt,
-        businessName: customer?.business_name || ''
+        businessName: customer?.business_name || '',
+        phone: customer?.phone || ''
       }
     });
 

@@ -153,9 +153,9 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const loadUserData = () => {
+  const loadUserData = async () => {
     if (!user) return;
-    
+
     setAccountInfo({
       email: user.emailAddresses[0]?.emailAddress || '',
       firstName: user.firstName || '',
@@ -168,6 +168,17 @@ export default function SettingsPage() {
       lastSignIn: user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : '',
       phone: user.phoneNumbers?.[0]?.phoneNumber || ''
     });
+
+    // Phone is stored on the customer record, not in Clerk
+    try {
+      const res = await fetch('/api/customer/update-account');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.account?.phone) {
+          setAccountInfo(prev => ({ ...prev, phone: data.account.phone }));
+        }
+      }
+    } catch {}
   };
 
   const loadBusinessProfile = async () => {
@@ -276,16 +287,16 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: accountInfo.email,
           firstName: accountInfo.firstName,
           lastName: accountInfo.lastName,
           phone: accountInfo.phone,
-          businessName: businessProfile.companyName
         })
       });
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Account information updated successfully!' });
+        // Pull the fresh name into Clerk's client cache so the UI reflects it
+        try { await user?.reload?.(); } catch {}
       } else {
         setMessage({ type: 'error', text: 'Failed to update account information' });
       }
@@ -704,13 +715,16 @@ export default function SettingsPage() {
                     <input
                       type="email"
                       value={accountInfo.email}
-                      onChange={(e) => setAccountInfo({...accountInfo, email: e.target.value})}
-                      className="w-full px-4 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white placeholder:text-gray-600"
+                      disabled
+                      className="w-full px-4 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-gray-400 cursor-not-allowed"
                     />
                     {accountInfo.emailVerified && (
                       <CheckCircle className="absolute right-3 top-3 w-5 h-5 text-green-400" />
                     )}
                   </div>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    This is your sign-in email — it's managed by your login and can't be edited here.
+                  </p>
                 </div>
                 
                 <div>
