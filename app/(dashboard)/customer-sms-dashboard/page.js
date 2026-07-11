@@ -166,6 +166,20 @@ export default function CustomerSMSDashboard() {
         console.warn('Could not load SMS provisioning:', configError);
       }
 
+      // Alert preferences come from the customer record (the system the
+      // alert sender actually reads)
+      let alertPrefs = {};
+      try {
+        const prefsRes = await fetch('/api/customer/notifications');
+        if (prefsRes.ok) {
+          const prefsData = await prefsRes.json();
+          alertPrefs = {
+            enableHotLeadAlerts: !!prefsData.preferences?.hotLeadAlerts,
+            alertBusinessHours: !!prefsData.preferences?.alertBusinessHours,
+          };
+        }
+      } catch { /* keep previous values */ }
+
       setDashboardData(prev => ({
         conversations: conversationsData.conversations || [],
         totalConversations: conversationsData.totalConversations || 0,
@@ -173,7 +187,12 @@ export default function CustomerSMSDashboard() {
         leadsGenerated: conversationsData.conversations?.filter(c => c.leadCaptured).length || 0,
         hotLeadAlerts: prev.hotLeadAlerts,
         hotLeadStats: prev.hotLeadStats,
-        smsConfig: smsConfig ? { ...smsConfig, enableHotLeadAlerts: prev.smsConfig?.enableHotLeadAlerts, alertBusinessHours: prev.smsConfig?.alertBusinessHours } : null,
+        smsConfig: smsConfig ? {
+          ...smsConfig,
+          enableHotLeadAlerts: prev.smsConfig?.enableHotLeadAlerts,
+          alertBusinessHours: prev.smsConfig?.alertBusinessHours,
+          ...alertPrefs,
+        } : null,
       }));
     } catch (error) {
       console.error('Dashboard loading error:', error);
@@ -183,14 +202,17 @@ export default function CustomerSMSDashboard() {
     }
   };
 
+  // Alert prefs live on the customer record (/api/customer/notifications) —
+  // the same system the alert sender actually reads. (The old handlers PUT to
+  // the legacy in-memory configure-ai route, which forgot everything on every
+  // deploy and gated nothing — the buttons looked dead because they were.)
   const toggleHotLeadAlerts = async () => {
-    if (!dashboardData.smsConfig?.phoneNumber) return;
     try {
-      const newSetting = !dashboardData.smsConfig.enableHotLeadAlerts;
-      const response = await fetch('/api/customer-sms/configure-ai', {
-        method: 'PUT',
+      const newSetting = !dashboardData.smsConfig?.enableHotLeadAlerts;
+      const response = await fetch('/api/customer/notifications', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: dashboardData.smsConfig.phoneNumber, updates: { enableHotLeadAlerts: newSetting } }),
+        body: JSON.stringify({ hotLeadAlerts: newSetting }),
       });
       if (response.ok) {
         setDashboardData(prev => ({ ...prev, smsConfig: { ...prev.smsConfig, enableHotLeadAlerts: newSetting } }));
@@ -201,13 +223,12 @@ export default function CustomerSMSDashboard() {
   };
 
   const setBusinessHours = async (businessHoursOnly) => {
-    if (!dashboardData.smsConfig?.phoneNumber) return;
-    if (!!dashboardData.smsConfig.alertBusinessHours === businessHoursOnly) return;
+    if (!!dashboardData.smsConfig?.alertBusinessHours === businessHoursOnly) return;
     try {
-      const response = await fetch('/api/customer-sms/configure-ai', {
-        method: 'PUT',
+      const response = await fetch('/api/customer/notifications', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: dashboardData.smsConfig.phoneNumber, updates: { alertBusinessHours: businessHoursOnly } }),
+        body: JSON.stringify({ alertBusinessHours: businessHoursOnly }),
       });
       if (response.ok) {
         setDashboardData(prev => ({ ...prev, smsConfig: { ...prev.smsConfig, alertBusinessHours: businessHoursOnly } }));
