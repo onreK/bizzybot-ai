@@ -98,6 +98,7 @@ export default function SettingsPage() {
     country: 'United States',
     businessPhone: '',
     businessEmail: '',
+    avgJobValue: '',
     description: ''
   });
   
@@ -188,6 +189,7 @@ export default function SettingsPage() {
             country: data.profile.country || 'United States',
             businessPhone: data.profile.phone || '',
             businessEmail: '',
+            avgJobValue: data.profile.avgJobValue ?? '',
             description: data.profile.description || ''
           });
         }
@@ -314,6 +316,7 @@ export default function SettingsPage() {
           country: businessProfile.country,
           phone: businessProfile.businessPhone,
           description: businessProfile.description,
+          avgJobValue: businessProfile.avgJobValue,
         })
       });
 
@@ -838,6 +841,23 @@ export default function SettingsPage() {
                     onChange={(e) => setBusinessProfile({...businessProfile, businessPhone: e.target.value})}
                     className="w-full px-4 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Average Job Value ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={businessProfile.avgJobValue}
+                    onChange={(e) => setBusinessProfile({...businessProfile, avgJobValue: e.target.value})}
+                    placeholder="e.g. 5000"
+                    className="w-full px-4 py-2 bg-[#0D1117] border border-gray-800 rounded-lg text-white placeholder:text-gray-600"
+                  />
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    What a typical customer is worth to you — powers the potential value shown on your leads.
+                  </p>
                 </div>
               </div>
 

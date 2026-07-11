@@ -27,9 +27,11 @@ function timeAgo(dateStr) {
 }
 
 function scoreTone(score) {
-  if (score >= 9) return 'text-red-400 bg-red-500/10';
-  if (score >= 7) return 'text-orange-400 bg-orange-500/10';
-  if (score >= 5) return 'text-yellow-400 bg-yellow-500/10';
+  // Scores are 0-100 (the old thresholds assumed 0-10, so any score ≥9
+  // of 100 showed red — a mildly curious lead got a flame)
+  if (score >= 70) return 'text-red-400 bg-red-500/10';
+  if (score >= 55) return 'text-orange-400 bg-orange-500/10';
+  if (score >= 40) return 'text-yellow-400 bg-yellow-500/10';
   return 'text-green-400 bg-green-500/10';
 }
 
@@ -75,8 +77,8 @@ function ConversationRow({ conversation }) {
               {conversation.leadCaptured && (
                 <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full">Lead</span>
               )}
-              {topScore >= 7 && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${scoreTone(topScore)}`}>🔥 {topScore}/10</span>
+              {topScore >= 70 && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${scoreTone(topScore)}`}>🔥 {topScore}</span>
               )}
             </div>
             {!expanded && last?.body && (
@@ -452,7 +454,7 @@ export default function CustomerSMSDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${scoreTone(alert.leadInfo?.score || 0)}`}>
-                            🔥 {alert.leadInfo?.score || 0}/10
+                            🔥 {alert.leadInfo?.score || 0}
                           </span>
                           <span className="text-gray-500 text-xs">from {alert.source === 'sms' ? 'SMS' : 'Website'}</span>
                         </div>

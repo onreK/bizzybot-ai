@@ -55,6 +55,7 @@ async function ensureCustomerColumns() {
   await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
   await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS clerk_user_id VARCHAR(255)`).catch(() => {});
   await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(() => {});
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS avg_job_value NUMERIC`).catch(() => {});
 }
 
 // Find the customer row for this Clerk user, tolerant of the legacy
@@ -102,7 +103,7 @@ export async function POST(request) {
     const {
       businessName, industry, website, phone,
       address, city, state, zipCode, country,
-      timezone, employeeCount, description,
+      timezone, employeeCount, description, avgJobValue,
     } = body;
 
     console.log('🏢 Updating business profile for user:', clerkId);
@@ -119,6 +120,17 @@ export async function POST(request) {
         `UPDATE customers SET business_name = $1, updated_at = NOW() WHERE id = $2`,
         [businessName.trim(), customer.id]
       );
+    }
+
+    // 2b. Average job value — drives each lead's potential_value
+    // (avg_job_value × temperature multiplier in lead scoring).
+    if (avgJobValue !== undefined) {
+      const cleanValue = parseFloat(String(avgJobValue).replace(/[$,\s]/g, ''));
+      const valueToSave = Number.isFinite(cleanValue) && cleanValue > 0 ? cleanValue : null;
+      await query(
+        `UPDATE customers SET avg_job_value = $1, updated_at = NOW() WHERE id = $2`,
+        [valueToSave, customer.id]
+      ).catch(() => {});
     }
 
     // 3. Upsert business_profiles — manual update-or-insert so we never
@@ -219,7 +231,7 @@ export async function GET() {
     }
 
     const result = await query(
-      `SELECT c.business_name,
+      `SELECT c.business_name, c.avg_job_value,
               bp.industry, bp.website, bp.phone, bp.address, bp.city,
               bp.state, bp.zip_code, bp.country, bp.timezone,
               bp.employee_count, bp.description
@@ -248,6 +260,7 @@ export async function GET() {
         timezone: row.timezone || 'America/New_York',
         employeeCount: row.employee_count || '',
         description: row.description || '',
+        avgJobValue: row.avg_job_value != null ? Number(row.avg_job_value) : '',
       },
     });
   } catch (error) {
