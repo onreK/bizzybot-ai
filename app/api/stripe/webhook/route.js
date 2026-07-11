@@ -59,11 +59,13 @@ export async function POST(request) {
 async function handleCheckoutCompleted(session) {
   try {
     const { clerkClient } = await import('@clerk/nextjs/server');
-    const userId = session.metadata.userId;
+    // Checkout sessions tag the user as metadata.clerkUserId (see
+    // /api/customer/subscription); accept the legacy userId key too.
+    const userId = session.metadata?.clerkUserId || session.metadata?.userId;
     const subscriptionId = session.subscription;
 
     if (!userId) {
-      console.error('No userId in session metadata');
+      console.error('No clerkUserId/userId in session metadata');
       return;
     }
 
@@ -71,10 +73,12 @@ async function handleCheckoutCompleted(session) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const priceId = subscription.items.data[0].price.id;
 
-    // Determine plan based on price ID
-    let plan = 'starter';
-    if (priceId === process.env.STRIPE_PROFESSIONAL_PRICE_ID || priceId.includes('professional')) plan = 'professional';
-    if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID || priceId.includes('business') || priceId.includes('enterprise')) plan = 'business';
+    // Determine plan from the canonical price map in lib/stripe.js.
+    // (The old env-var lookup was never configured, so every purchase fell
+    // through to 'starter' regardless of what the customer bought.)
+    const { PRICING_PLANS } = await import('../../../../lib/stripe.js');
+    const plan =
+      Object.entries(PRICING_PLANS).find(([, p]) => p.priceId === priceId)?.[0] || 'starter';
 
     const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
     const status = subscription.status; // 'trialing', 'active', etc.
