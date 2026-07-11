@@ -335,9 +335,11 @@ export default function LeadsPage() {
     });
   };
 
-  // Format currency properly
+  // Format currency properly. Null/zero means "no average job value set" —
+  // show a dash instead of a misleading $0.
   const formatCurrency = (value) => {
     const num = parseFloat(value) || 0;
+    if (num <= 0) return '—';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
