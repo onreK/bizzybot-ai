@@ -48,7 +48,7 @@ import {
 
 export default function SettingsPage() {
   const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { signOut, openUserProfile } = useClerk();
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState('account');
@@ -723,7 +723,15 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5">
-                    This is your sign-in email — it's managed by your login and can't be edited here.
+                    This is your sign-in email.{' '}
+                    <button
+                      type="button"
+                      onClick={() => openUserProfile()}
+                      className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                    >
+                      Change it securely here
+                    </button>
+                    {' '}— add your new address, verify it with a code, and set it as primary.
                   </p>
                 </div>
                 

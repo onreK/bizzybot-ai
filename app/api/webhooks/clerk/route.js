@@ -103,7 +103,24 @@ export async function POST(req) {
   }
 
   if (eventType === 'user.updated') {
-    console.log('👤 User updated, webhook received');
+    // Keep customers.email in sync with the VERIFIED primary Clerk email —
+    // this column drives admin access + notifications, so it must always
+    // reflect the real login identity (never user-typed input).
+    try {
+      const { query } = await import('../../../../lib/database.js');
+      const primary = userData.email_addresses?.find(
+        e => e.id === userData.primary_email_address_id
+      );
+      if (primary?.email_address) {
+        await query(
+          `UPDATE customers SET email = $1, updated_at = NOW() WHERE clerk_user_id = $2`,
+          [primary.email_address, userData.id]
+        );
+        console.log(`👤 Synced primary email for ${userData.id}`);
+      }
+    } catch (err) {
+      console.error('⚠️ user.updated email sync failed:', err.message);
+    }
     return NextResponse.json({ received: true });
   }
 
