@@ -141,33 +141,44 @@ export async function POST(request) {
 
     // 🎯 USE CENTRALIZED AI SERVICE FOR SMS RESPONSE
     console.log('🧠 Using centralized AI service for SMS...');
-    
-    // Build conversation history for context
-    const conversationHistory = conversation.messages.slice(-6).map(msg => ({
-      role: msg.from === fromNumber ? 'user' : 'assistant',
-      content: msg.body,
-      sender_type: msg.from === fromNumber ? 'user' : 'assistant'
-    }));
+
+    // Build conversation history from the DATABASE, not the in-memory map —
+    // the map is wiped on every deploy, which gave the AI amnesia whenever a
+    // lead replied later ("picks up where we left off" requires this).
+    let conversationHistory = [];
+    if (resolvedClerkUserId) {
+      try {
+        const historyResult = await query(
+          `SELECT m.sender_type, m.content
+           FROM messages m
+           JOIN conversations c ON c.id = m.conversation_id
+           WHERE c.user_id = $1 AND c.type = 'sms' AND c.contact_phone = $2
+           ORDER BY m.created_at DESC
+           LIMIT 10`,
+          [resolvedClerkUserId, fromNumber]
+        );
+        conversationHistory = historyResult.rows.reverse().map(m => ({
+          role: m.sender_type === 'user' ? 'user' : 'assistant',
+          content: m.content,
+          sender_type: m.sender_type === 'user' ? 'user' : 'assistant',
+        }));
+      } catch (histErr) {
+        console.error('⚠️ [SMS-WEBHOOK] History load failed (continuing without):', histErr.message);
+      }
+    }
 
     let aiResult;
     
     // Check if this is the first message and we have a welcome message
-    if (conversation.messages.length === 1 && customerConfig.welcomeMessage) {
-      aiResult = await generateSMSResponse(
-        fromNumber,
-        messageBody,
-        conversationHistory,
-        resolvedClerkUserId
-      );
-      aiResult.response = customerConfig.welcomeMessage;
-    } else {
-      aiResult = await generateSMSResponse(
-        fromNumber,
-        messageBody,
-        conversationHistory,
-        resolvedClerkUserId
-      );
-    }
+    // Always send the AI's real answer — the old code replaced the AI's reply
+    // to a lead's FIRST message with a canned welcome line, so new leads asking
+    // "what's your pricing?" got "Thanks for reaching out!" instead of pricing.
+    aiResult = await generateSMSResponse(
+      fromNumber,
+      messageBody,
+      conversationHistory,
+      resolvedClerkUserId
+    );
 
     console.log('✅ Centralized AI service result:', {
       success: aiResult.success,
