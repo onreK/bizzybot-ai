@@ -261,7 +261,10 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 **DEMO WENT WELL — solar company starting a free trial, likely converting.** Their feature ask (manual lead creation) shipped same-day (Add Lead button).
 
-**0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority before solar signs up):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. This is the final onboarding confidence check; everything code-side was audited + fixed 07-10 (see session log: Stripe webhook was broken 3 ways).
+**0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority before solar signs up):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. This is the final onboarding confidence check; everything code-side was audited + fixed 07-10 (see session log: Stripe webhook was broken 3 ways). While testing, watch the scoring arc: first text (warm-ish) → pricing question (score climbs) → booking (flips hot + $ value).
+
+**0b. [ ] Founder email switch:** kernojunk login → Drayke@bizzybotai.com via Settings → Account → "Change it securely here" (Clerk modal: add → verify code from Outlook → set primary). Confirm customers.email syncs after (if not: Clerk Dashboard → Webhooks → enable user.updated on the endpoint). ADMIN_CLERK_ID_1 already pinned as fallback.
+**0c. [ ] Outbound email probation retest** (~07-11/12): send test from Drayke@bizzybotai.com to any Gmail — if still 550 5.7.708, open M365 support ticket.
 
 **Post-demo cleanup:**
 1. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (see memory: demo-solar-persona). Keep hot_lead_detection=true.
@@ -292,6 +295,20 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 ---
 
 ## Session Log
+
+### Session — 2026-07-11 (lead scoring rebuilt · account settings truth-pass · 2 security holes closed)
+
+- **Lead scoring fully vetted + rebuilt (founder: "feels inaccurate" — he was right, it was disconnected, not mistuned):**
+  - Bookings never scored: real bookings emit `appointment_booked`, counter map only listened for never-emitted `appointment_scheduled`. Booking flow now creates/links the contact + tracks through trackLeadEventWithContact → appointment_count++ → instant hot (anonymous leads fall back to bare analytics event; metadata {start, attendee} preserved for scheduling page).
+  - Phone requests never scored: analyzer emits `phone_requested`, map had `phone_request`. Both mapped; new `recordEngagementSignal()` in leads-service bumps counters + rescores WITHOUT inserting analytics events (no double counting).
+  - `pricing_discussion_count` column never existed (classifier checked a phantom). Column added; pricing keyword regex in ai-service increments it per message.
+  - SMS page displayed 0-100 scores as "N/10" with 0-10 flame thresholds (any score ≥9/100 got a flame). Now 70/55/40 tiers, flame at 70+.
+  - **potential_value was BizzyBot's legacy $97–$497 subscription prices masquerading as lead worth.** Now `customers.avg_job_value × temperature` (hot 1.0 / warm 0.5 / cold 0.15), NULL→"—" when unset. New **"Average Job Value ($)"** field in Settings → Business Profile. Founder set 18000 (solar persona) → 4 hot × $18k + 2 warm + 45 cold = $211.5k demo pipeline.
+  - All 75 prod contacts rescored; test lead went 35/cold → **80/hot** (the booked+pricing lead — correct). Scoring math verified by hand against the formula.
+- **Settings → Account tab truth-pass** (founder: "saves don't stick"): names were saving (UI didn't refresh — now user.reload() after save); **phone was never saved anywhere** (endpoint ignored it — now stored on customers.phone, loaded back via GET); **email edits were logged + discarded** (needs a verification flow) — field now disabled with a "Change it securely here" link that opens **Clerk's openUserProfile() modal** (add address → code verify → set primary; no custom flow to maintain).
+- **🔒 SECURITY: self-serve admin escalation closed.** update-account wrote the user-typed email straight into customers.email — the column admin access checks by domain. Any customer could type x@bizzybotai.com → instant admin. customers.email now only syncs from the VERIFIED Clerk primary (update-account + new user.updated webhook handler). (Yesterday's related fix: substring domain match `includes('@bizzybotai.com')` → anchored, all 3 admin routes.)
+- **Founder identity migration path:** ADMIN_CLERK_ID_1 pinned in Railway (admin survives any email change); founder switching login to Drayke@bizzybotai.com via the Clerk modal. ⚠️ Verify the Clerk webhook endpoint has **user.updated** subscribed (only user.created confirmed).
+- Leads: "—" instead of misleading $0 when avg job value unset.
 
 ### Session — 2026-07-10 (late night: demo won · Stripe pipeline repaired · marketing Phase 0)
 
