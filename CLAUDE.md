@@ -259,7 +259,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ## ☀️ NEXT SESSION TODO (start here — updated 2026-07-13)
 
-**DEMO WON — solar company on a free trial.** Their feature ask (manual Add Lead) shipped same-day.
+**🎉 FIRST REAL CUSTOMER: the solar company SIGNED UP 2026-07-13** — founder doing manual white-glove onboarding. ⚠️ Their account is SEPARATE from customer 863 (863 = founder's test account with the FAKE "Sunrise Solar" demo persona — do NOT edit 863 for the real customer; get their actual account first). Rushing to get their toll-free number online for marketing. TFV must pass first try: legal business name matches records, official-domain business email (NOT Gmail — that rejected 863), EIN if LLC/corp, real-person authorized contact. Number instant, SMS ~3-5 day approval, voice immediate. HOLD email onboarding for them until intent-triage ships.
 
 **0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority, still not done):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. Final onboarding confidence check; all code-side blockers cleared (Stripe webhook was broken 3 ways — fixed 07-10; scoring/memory rebuilt 07-11). Watch the scoring arc while testing: first text (warm-ish) → pricing question (score climbs) → booking (flips hot + $ value). NOTE: SMS memory only reaches back to 07-10 (persistence start); voice memory now flows into text/email/chat.
 
