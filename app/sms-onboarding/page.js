@@ -121,6 +121,8 @@ export default function SMSOnboarding() {
     if (!businessType) return 'Please select your business type';
     if (businessType !== 'SOLE_PROPRIETOR' && !ein.trim()) return 'EIN is required for your business type';
     if (!contactFirstName.trim() || !contactLastName.trim()) return 'Authorized contact first and last name are required';
+    if (!businessEmail.trim()) return 'Business email is required — carriers reject verifications without one';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail.trim())) return 'Business email doesn’t look like a valid email address';
     return '';
   };
 
@@ -488,7 +490,7 @@ export default function SMSOnboarding() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business email *</label>
               <input
                 type="email"
                 value={businessEmail}
