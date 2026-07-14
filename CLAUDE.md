@@ -257,33 +257,35 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — updated 2026-07-10 late night)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-13)
 
-**DEMO WENT WELL — solar company starting a free trial, likely converting.** Their feature ask (manual lead creation) shipped same-day (Add Lead button).
+**DEMO WON — solar company on a free trial.** Their feature ask (manual Add Lead) shipped same-day.
 
-**0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority before solar signs up):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. This is the final onboarding confidence check; everything code-side was audited + fixed 07-10 (see session log: Stripe webhook was broken 3 ways). While testing, watch the scoring arc: first text (warm-ish) → pricing question (score climbs) → booking (flips hot + $ value).
+**0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority, still not done):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. Final onboarding confidence check; all code-side blockers cleared (Stripe webhook was broken 3 ways — fixed 07-10; scoring/memory rebuilt 07-11). Watch the scoring arc while testing: first text (warm-ish) → pricing question (score climbs) → booking (flips hot + $ value). NOTE: SMS memory only reaches back to 07-10 (persistence start); voice memory now flows into text/email/chat.
 
-**0b. [ ] Founder email switch:** kernojunk login → Drayke@bizzybotai.com via Settings → Account → "Change it securely here" (Clerk modal: add → verify code from Outlook → set primary). Confirm customers.email syncs after (if not: Clerk Dashboard → Webhooks → enable user.updated on the endpoint). ADMIN_CLERK_ID_1 already pinned as fallback.
-**0c. [ ] Outbound email probation retest** (~07-11/12): send test from Drayke@bizzybotai.com to any Gmail — if still 550 5.7.708, open M365 support ticket.
+**1. [ ] Build INTENT TRIAGE (roadmap item #0) BEFORE reconnecting Outlook** — the AI auto-replied to Microsoft Support asking about their roof + marked the support engineer a $18k HOT lead. Classify inbound email (lead / existing-lead reply / business-correspondence=flag-don't-reply / automated / ambiguous) + de-fang HOT_LEAD_KEYWORDS (drop help/issue/contact/problem). Outlook is disconnected from BizzyBot until this ships. See [[ai-brain-roadmap]] memory.
 
 **Post-demo cleanup:**
-1. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (see memory: demo-solar-persona). Keep hot_lead_detection=true.
-2. [ ] **DKIM toggle** — security.microsoft.com/authentication?viewid=DKIM → bizzybotai.com → Enable (was blocked on Microsoft-side key sync 07-10; CNAMEs verified live). Until then first-contact emails may hit spam.
+2. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (memory: demo-solar-persona); decide on avg_job_value 18000. Keep hot_lead_detection=true.
 
 **Verification still owed (fast):**
-3. [ ] **Voice test from a NON-forwarded phone** (not 858-900-4220): cell rings ~18s → AI answers as Sunrise Solar → missed-call **text** alert now deliverable (TFV approved) + email alert.
-4. [ ] **Fresh hot-lead SMS** post-dd2bc5d deploy: high-intent text → bell shows the lead, SMS Hot Lead Alerts card fills, Leads shows hot. Also flip **Hot Lead Alerts toggle ON** (SMS page) to test owner text+email alert.
+3. [ ] **Voice test from a NON-forwarded phone** (not 858-900-4220): cell rings ~18s → AI answers as Sunrise Solar → missed-call text alert (TFV approved) + email alert. (Carrier network had a degraded window 07-12, recovered 07-13 — retest on a clear day.)
+4. [ ] **Fresh hot-lead SMS**: high-intent text → bell shows lead, SMS Hot Lead Alerts card fills, Leads shows hot. Flip **Hot Lead Alerts toggle ON** (SMS page) + set alert email in Settings→Notifications to test owner text+email alert (business-hours schedule now actually enforced).
 5. [ ] **Add Lead** live test: manual lead appears at top; adding an existing texter's number merges (no duplicate).
-6. [ ] **First-SMS-reply genericness**: first reply to a brand-new texter was generic ("How can I help?") while the second was perfect — trace config load on first contact.
+6. [x] ~~First-SMS-reply genericness~~ SOLVED 07-11: the code replaced the AI's reply to a lead's FIRST message with a canned welcome line — removed.
 
-**Gmail (still pre-launch "coming soon", lower priority):**
-7. [ ] Reconnect test Gmail (kernojunk) on the secure OAuth flow → fresh test → exactly one reply, real info, no placeholders. Gmail hot-lead path also still uses 'email_received' (never promotes to hot) — mirror the hot_lead fix when touching it.
+**Founder email switch (email now fully working — outbound block LIFTED 07-13):**
+7. [ ] kernojunk login → Drayke@bizzybotai.com via Settings → Account → "Change it securely here" (Clerk modal). Confirm customers.email syncs (if not: Clerk Dashboard → Webhooks → enable user.updated). ADMIN_CLERK_ID_1 pinned as fallback.
 
-**Carried forward (unchanged):**
-8. [ ] Mobile real-phone check (hamburger/bell/Email split inbox).
-9. [ ] Web-chat widget embed on a real external HTML page (persistence schema now fixed 07-10 — retest end-to-end).
-10. [ ] Analytics page sanity on prod ("Booked by your AI" + Appointments should now tick — events fixed 07-10).
-11. [ ] Launch prep (founding customers, BIZZYFOUNDER coupon) — the solar demo IS the first founding-customer conversation.
+**Gmail (pre-launch "coming soon", lower priority):**
+8. [ ] Reconnect test Gmail on secure OAuth → fresh test → one reply, real info, no placeholders. Gmail hot-lead path still uses 'email_received' (never promotes hot) — mirror the hot_lead fix when touching it.
+
+**Carried forward:**
+9. [ ] Mobile real-phone check (hamburger/bell/Email split inbox).
+10. [ ] Web-chat widget embed on a real external HTML page (persistence schema fixed 07-10/11 — retest end-to-end).
+11. [ ] Analytics page sanity on prod ("Booked by your AI" + Appointments should tick now).
+12. [ ] Launch prep (founding customers, BIZZYFOUNDER coupon).
+13. [ ] Voice-to-voice memory: inject prior call summaries into Vapi at call-start ([[ai-brain-roadmap]] #7).
 
 **Product gaps / decisions parked:**
 - **Unit Economics panel uses conservative estimated rates** (founder-confirmed 2026-07-10: shown margins are likely LOWER than actual). Rates live in `UNIT_RATES` in app/api/admin/usage-costs/route.js — reconcile against real Twilio + Vapi invoices after first months of customer traffic, then tune.
@@ -295,6 +297,18 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 ---
 
 ## Session Log
+
+### Session — 2026-07-11→13 (memory · alerts · email inbox UX · saga resolutions)
+
+- **SMS conversation memory made real** (was in-memory Map, wiped every deploy → AI had amnesia when a lead replied later): history now loaded from persisted conversations/messages (last 10, keyed customer+phone). Also removed the welcome-message override that replaced the AI's reply to a lead's FIRST message with a canned greeting (THE "generic first reply" mystery — solved).
+- **Cross-channel voice memory**: getLeadContextForResponse pulls the lead's last 2 AI phone-call summaries from vapi_call_logs (matched last-10-digits) into every text/email/chat prompt, with guardrails (never quote imperfect transcripts verbatim, confirm don't assert). Voice-to-voice (Vapi at call-start) deferred.
+- **Alert schedule fixed**: SMS-page Hot Lead Alerts toggle + 24/7-vs-Business-hours buttons were wired to a legacy in-memory configure-ai route (dead after every deploy) and nothing read the values. Now → /api/customer/notifications (partial-update, can't wipe alert email); new customers.alert_business_hours col; sendHotLeadAlert actually suppresses outside Mon–Fri 9–5 business-local.
+- **Email inbox UX**: unreplied emails get a blue outline ring (removed once aiReply exists); Sent tab now derives from every inbox email carrying an AI reply (survives refresh — old list was session-only, hence Sent 0).
+- **Account settings truth-pass + email-change flow**: phone now actually saves (customers.phone); sign-in email field opens Clerk's openUserProfile modal (add→verify→set-primary) instead of a fake editable box; customers.email syncs only from verified Clerk primary (user.updated webhook). Founder identity migrating to Drayke@bizzybotai.com; ADMIN_CLERK_ID_1 pinned.
+- **🔒 admin-escalation hole closed** (update-account wrote user-typed email into the admin-check column) + anchored the domain match in all 3 admin routes.
+- **EMAIL SAGA RESOLVED**: 550 5.7.708 outbound block was NOT tenant-wide (hand-written mail delivered; only Graph-sent AI replies bounced → outbound-spam verdict on automated sends). New-tenant reputation, worsened by pre-MFA token revocation (AADSTS50076, fixed by one reconnect). **Block LIFTED 2026-07-13 on a MANDATORY anti-abuse verification phone call** (Case 2607110040000834). Outlook still disconnected from BizzyBot pending intent-triage.
+- **Intent-triage identified as roadmap #0** (AI pitched site assessments to Microsoft Support + scored the engineer a $18k hot lead — HOT_LEAD_KEYWORDS too loose). Full AI-brain roadmap saved in memory.
+- **Non-issues diagnosed** (observability win — none were our code): Twilio carrier-network degradation 07-12 (calls rang-out, recovered 07-13); Microsoft Entra "designate 2nd global admin" email (routine best-practice nag).
 
 ### Session — 2026-07-11 (lead scoring rebuilt · account settings truth-pass · 2 security holes closed)
 
