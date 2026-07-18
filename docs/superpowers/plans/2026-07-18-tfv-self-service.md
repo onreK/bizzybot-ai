@@ -22,7 +22,7 @@
 
 ---
 
-### Task 1: Shared lookup helper + branded opt-in page
+### Task 1: Shared lookup helper + branded opt-in page ✅ DONE 2026-07-18 (note: legal_business_name ALTER pulled forward from Task 3 — helper needs the column)
 
 **Files:**
 - Create: `lib/branded-pages.js`
@@ -273,7 +273,7 @@ After deploy: spot-check `https://bizzybotai.com/sms-optin/8669445685` and the 4
 
 ---
 
-### Task 2: Branded SMS terms page
+### Task 2: Branded SMS terms page ✅ DONE 2026-07-18
 
 **Files:**
 - Create: `app/sms-terms/[number]/page.js`
