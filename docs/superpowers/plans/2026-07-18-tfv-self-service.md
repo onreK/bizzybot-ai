@@ -479,7 +479,8 @@ git push origin main
 
 ---
 
-### Task 5: Submission uses DBA name + branded page URLs
+### Task 5: Submission uses DBA name + branded page URLs ✅ DONE 2026-07-18
+> Deviation from plan: instead of a temporary console.log + local script (blocked by ESM/CJS — repo package.json has no "type": "module", so node can't import lib/*.js directly), added a permanent `dryRun` option to `submitTollfreeVerification` and a CRON_SECRET-gated ops route `POST /api/admin/resubmit-tfv` (`{ clerkUserId, dryRun? }`, added to middleware publicRoutes). Dry-run verified locally against the founder's number: branded URLs + correct payload, 401 without secret. **Task 6 uses this route (deployed, real CRON_SECRET) instead of the local script.**
 
 **Files:**
 - Modify: `lib/tollfree-verification.js` (`submitTollfreeVerification`)
