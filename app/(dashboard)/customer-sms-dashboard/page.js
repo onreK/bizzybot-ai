@@ -252,6 +252,9 @@ export default function CustomerSMSDashboard() {
   const cfg = dashboardData.smsConfig;
   const verified = !!cfg?.verified;
   const needsInfo = cfg?.verificationStatus === 'needs_info';
+  // Customer-facing: a carrier rejection is an internal ops problem (admin is
+  // emailed the details) — the customer just sees activation still in progress.
+  const activationHeld = cfg?.verificationStatus === 'TWILIO_REJECTED';
   const alertsOn = !!cfg?.enableHotLeadAlerts;
   const businessHoursOnly = !!cfg?.alertBusinessHours;
 
@@ -321,14 +324,22 @@ export default function CustomerSMSDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-[#161B22] border border-gray-800 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Status</p>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${verified ? 'bg-green-400 animate-pulse' : needsInfo ? 'bg-red-400' : 'bg-yellow-400 animate-pulse'}`} />
-                <span className="text-white font-semibold">
-                  {verified ? 'Active' : needsInfo ? 'Action needed' : 'Pending'}
-                </span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-sm">📞 Calls</span>
+                  <span className="text-green-400 text-sm font-semibold">Live</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-sm">💬 Texting</span>
+                  <span className={`text-sm font-semibold ${verified ? 'text-green-400' : needsInfo ? 'text-amber-400' : 'text-blue-400'}`}>
+                    {verified ? 'Live' : needsInfo ? 'Waiting on your info' : 'Being activated'}
+                  </span>
+                </div>
               </div>
-              <p className="text-gray-500 text-xs mt-1">
-                {verified ? 'AI is answering texts' : needsInfo ? 'Business info required' : 'Carrier verification'}
+              <p className="text-gray-500 text-xs mt-2">
+                {verified ? 'AI is answering texts and calls 24/7'
+                  : needsInfo ? 'Finish setup to start activation'
+                  : 'Usually 3–5 business days — calls already work'}
               </p>
             </div>
 
@@ -346,17 +357,21 @@ export default function CustomerSMSDashboard() {
 
           {/* Verification banner */}
           {!verified && (
-            <div className={`flex items-start gap-3 rounded-xl border p-4 ${needsInfo ? 'bg-red-500/10 border-red-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+            <div className={`flex items-start gap-3 rounded-xl border p-4 ${needsInfo ? 'bg-red-500/10 border-red-500/20' : activationHeld ? 'bg-blue-500/10 border-blue-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
               {needsInfo
                 ? <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                : <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />}
+                : <Clock className={`w-5 h-5 flex-shrink-0 mt-0.5 ${activationHeld ? 'text-blue-400' : 'text-amber-400'}`} />}
               <div>
-                <p className={`text-sm font-medium ${needsInfo ? 'text-red-400' : 'text-amber-400'}`}>
-                  {needsInfo ? 'We need a bit more business info' : 'Carriers are verifying your number'}
+                <p className={`text-sm font-medium ${needsInfo ? 'text-red-400' : activationHeld ? 'text-blue-400' : 'text-amber-400'}`}>
+                  {needsInfo ? 'We need a bit more business info'
+                    : activationHeld ? 'Texting activation in progress'
+                    : 'Carriers are activating your number for texting'}
                 </p>
                 <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
                   {needsInfo
                     ? 'Complete your business details so we can submit your number for carrier approval.'
+                    : activationHeld
+                    ? "Our team is handling a carrier requirement — no action needed on your end. Your AI is already answering calls, and we'll email you the moment texting is live."
                     : "Usually 1–5 business days. Once approved your AI answers texts automatically — we'll email you the moment it's live."}
                 </p>
               </div>

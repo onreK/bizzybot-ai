@@ -246,6 +246,9 @@ export default function SMSOnboarding() {
   if (pageState === 'assigned' && assigned) {
     const isVerified = assigned.verified || assigned.verificationStatus === 'TWILIO_APPROVED';
     const needsInfo = assigned.verificationStatus === 'needs_info';
+    // Carrier rejection is handled by our team (admin gets the details);
+    // the customer just sees activation still in progress.
+    const activationHeld = assigned.verificationStatus === 'TWILIO_REJECTED';
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
@@ -304,16 +307,37 @@ export default function SMSOnboarding() {
               </div>
             ) : (
               <div className="text-left space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-                  <p className="font-semibold text-blue-800 mb-2">📋 What happens next</p>
-                  <ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
-                    <li>Phone carriers verify your business for texting (required for every US business — usually <strong>1-5 business days</strong>)</li>
-                    <li>We email you the moment you&apos;re approved</li>
-                    <li>Your AI starts answering texts and calls 24/7</li>
-                  </ol>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">📞 Calls</span>
+                    <span className="text-sm font-semibold text-green-600">Live now</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                    <span className="text-sm font-medium text-gray-700">💬 Texting</span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {activationHeld ? 'Activation in progress' : 'Being activated'}
+                    </span>
+                  </div>
                 </div>
+                {activationHeld ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                    <p className="text-sm text-blue-700">
+                      Our team is handling a carrier requirement — no action needed on your end.
+                      Your AI is already answering calls on this number, and we&apos;ll email you the moment texting is live.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                    <p className="font-semibold text-blue-800 mb-2">📋 What happens next</p>
+                    <ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
+                      <li>Phone carriers activate your business for texting (required for every US business — usually <strong>1-5 business days</strong>)</li>
+                      <li>We email you the moment you&apos;re approved</li>
+                      <li>Your AI starts answering texts and calls 24/7</li>
+                    </ol>
+                  </div>
+                )}
                 <p className="text-sm text-gray-500 text-center">
-                  No action needed from you — we handle the whole verification process.
+                  No action needed from you — we handle the whole activation process. Calls work right away.
                 </p>
               </div>
             )}

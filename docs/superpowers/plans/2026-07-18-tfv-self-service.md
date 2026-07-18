@@ -553,7 +553,7 @@ git push origin main
 
 ---
 
-### Task 6: JPH resubmission (operational — deadline ~2026-07-22)
+### Task 6: JPH resubmission ⏸️ PARKED 2026-07-18 — JPH, LLC in bad standing; new LLC being formed. Deadline abandoned deliberately (resubmit under dead entity would re-reject). Resume when founder has new LLC name + EIN: update sms_verification_info.legal_business_name + registration_number + customers.business_name for their account, dry-run via POST /api/admin/resubmit-tfv, then real submit. JPH running first campaign on another platform — no urgency.
 
 **Files:**
 - Create (scratchpad, not committed): `resubmit-jph.js`
@@ -578,7 +578,7 @@ Expected: payload log shows `BusinessName: "JPH, LLC DBA Maryland Clean Energy I
 
 ---
 
-### Task 7: Customer-facing activation status card
+### Task 7: Customer-facing activation status card ✅ DONE 2026-07-18
 
 **Files:**
 - Modify: `app/(dashboard)/customer-sms-dashboard/page.js` (status banner area, uses existing `cfg.verificationStatus`)
