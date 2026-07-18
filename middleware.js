@@ -24,6 +24,8 @@ export default authMiddleware({
     "/privacy",
     "/terms",
     "/sms-optin-example",
+    "/sms-optin/(.*)",               // per-customer branded opt-in evidence (Twilio reviewers, no login)
+    "/sms-terms/(.*)",               // per-customer branded SMS terms (Twilio reviewers, no login)
     // OAuth routes - MUST be public for OAuth flows to work
     "/api/auth/google(.*)",
     "/api/auth/facebook(.*)",
