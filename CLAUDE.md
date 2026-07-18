@@ -133,6 +133,7 @@ BizzyBot gives businesses an AI agent that:
 - **Railway project:** `patient-miracle` (rename to bizzybot-ai in Railway dashboard)
 - **Cron service:** `bizzybot-cron` — runs `0 * * * *`, calls `/api/cron/run`
 - **Twilio Messaging Service SID:** `MG7d1d710aa54c4ebab29ae4127f233a0b`
+- **Twilio Trust Hub (verified 2026-07-18 — ⚠️ all profiles load-bearing, DELETE NONE):** ISV tree = primary account-holder profile `BU399c9d46cfc0cb57098c645ee1812ad6` ("Bizzy Bot Ai LLC", 2025-06-25 — parent referenced by all end-business profiles) → end-business profiles `BU5c6d7da709c2e711ef99c39a0291010d` ("Bizzy Bot Ai LLC" as end business, tied to the approved (866) 944-5685 TFV) and `BU7fa683a973ce9dcbdb5b0edbbb8df8fd` ("JPH, LLC" — profile approved; their TFV separately rejected; update identity when their new LLC exists). `BUec9068e9…` "My Starter Profile" = Twilio auto-created, harmless. The two same-named BizzyBot profiles are different roles, NOT duplicates.
 - **Facebook App ID:** `1018657873452513`
 - **Microsoft Azure App:** `BizzyBot Ai` — Client ID: `e1f4b73a-dacf-4e67-b0d2-173120d0a7ba`, Tenant ID: `d0accbe0-735e-4a51-ac15-4c4725e3d858` (secret in Railway as `MICROSOFT_CLIENT_SECRET`, expires ~2028)
 - **Vapi:** `VAPI_PUBLIC_KEY` + `VAPI_PRIVATE_KEY` + `VAPI_WEBHOOK_SECRET` in Railway
