@@ -288,19 +288,24 @@ export default function AISettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel: 'voice', settings: settings.voice }),
       });
-      // 2. Push updated settings to the Vapi assistant
-      const syncRes = await fetch('/api/vapi/provision', { method: 'PATCH' });
+      // 2. Push updated settings to the Vapi assistant. The assistant keeps a
+      // static copy of its instructions — an unsynced save means calls keep
+      // using the OLD settings, so retry once and be honest on failure.
+      let syncRes = await fetch('/api/vapi/provision', { method: 'PATCH' });
+      if (!syncRes.ok) {
+        syncRes = await fetch('/api/vapi/provision', { method: 'PATCH' });
+      }
       if (syncRes.ok) {
         setMessage({ type: 'success', text: 'Voice AI settings saved and synced!' });
       } else {
-        setMessage({ type: 'success', text: 'Settings saved. Voice AI will use them on next call.' });
+        setMessage({ type: 'error', text: 'Settings saved, but syncing to your voice assistant failed — calls are still using your previous settings. Please click Save & Sync again.' });
       }
     } catch {
       setMessage({ type: 'error', text: 'Error saving settings.' });
     } finally {
       setSaving(false);
       setVoiceSyncing(false);
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      setTimeout(() => setMessage({ type: '', text: '' }), 6000);
     }
   };
 
