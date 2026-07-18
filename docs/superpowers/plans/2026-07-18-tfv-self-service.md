@@ -365,7 +365,7 @@ git push origin main
 
 ---
 
-### Task 3: `legal_business_name` — DB column + API
+### Task 3: `legal_business_name` — DB column + API ✅ DONE 2026-07-18
 
 **Files:**
 - Modify: `lib/tollfree-verification.js` (`ensureVerificationInfoTable`, ~line 44)
@@ -414,7 +414,7 @@ git push origin main
 
 ---
 
-### Task 4: Onboarding form — legal name + brand name fields
+### Task 4: Onboarding form — legal name + brand name fields ✅ DONE 2026-07-18
 
 **Files:**
 - Modify: `app/sms-onboarding/page.js`

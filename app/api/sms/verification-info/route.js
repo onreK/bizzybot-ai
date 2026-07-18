@@ -15,7 +15,7 @@ export async function GET() {
 
     await ensureVerificationInfoTable();
     const result = await query(
-      `SELECT business_type, registration_number, contact_first_name, contact_last_name, business_email
+      `SELECT business_type, registration_number, contact_first_name, contact_last_name, business_email, legal_business_name
        FROM sms_verification_info WHERE clerk_user_id = $1 LIMIT 1`,
       [userId]
     ).catch(() => ({ rows: [] }));
@@ -28,6 +28,7 @@ export async function GET() {
       contactFirstName: row.contact_first_name || '',
       contactLastName: row.contact_last_name || '',
       businessEmail: row.business_email || '',
+      legalBusinessName: row.legal_business_name || '',
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -40,10 +41,15 @@ export async function POST(request) {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { businessType, ein, contactFirstName, contactLastName, businessEmail } = await request.json();
+    const { businessType, ein, contactFirstName, contactLastName, businessEmail, legalBusinessName } = await request.json();
 
     if (!businessType || !VALID_TYPES.includes(businessType)) {
       return NextResponse.json({ success: false, error: 'Please select a valid business type' }, { status: 400 });
+    }
+    // Carriers check this against official records (error 30484) — required.
+    const cleanLegalName = (legalBusinessName || '').trim();
+    if (!cleanLegalName) {
+      return NextResponse.json({ success: false, error: 'Legal business name is required — exactly as it appears on your EIN letter or state registration' }, { status: 400 });
     }
     if (businessType !== 'SOLE_PROPRIETOR' && !(ein || '').trim()) {
       return NextResponse.json({ success: false, error: 'EIN is required for this business type' }, { status: 400 });
@@ -64,16 +70,17 @@ export async function POST(request) {
     await ensureVerificationInfoTable();
     await query(
       `INSERT INTO sms_verification_info
-         (clerk_user_id, business_type, registration_number, contact_first_name, contact_last_name, business_email, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         (clerk_user_id, business_type, registration_number, contact_first_name, contact_last_name, business_email, legal_business_name, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
        ON CONFLICT (clerk_user_id) DO UPDATE SET
          business_type = EXCLUDED.business_type,
          registration_number = EXCLUDED.registration_number,
          contact_first_name = EXCLUDED.contact_first_name,
          contact_last_name = EXCLUDED.contact_last_name,
          business_email = EXCLUDED.business_email,
+         legal_business_name = EXCLUDED.legal_business_name,
          updated_at = NOW()`,
-      [userId, businessType, cleanEin, firstName, lastName, cleanBusinessEmail || null]
+      [userId, businessType, cleanEin, firstName, lastName, cleanBusinessEmail || null, cleanLegalName]
     );
 
     return NextResponse.json({ success: true });

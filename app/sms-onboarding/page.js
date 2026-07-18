@@ -26,6 +26,7 @@ export default function SMSOnboarding() {
   });
 
   // Verification-specific compliance info (kept separate from business profile)
+  const [legalBusinessName, setLegalBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [ein, setEin] = useState('');
   const [contactFirstName, setContactFirstName] = useState('');
@@ -96,6 +97,7 @@ export default function SMSOnboarding() {
         const infoRes = await fetch('/api/sms/verification-info');
         const infoData = await infoRes.json();
         if (infoData.success) {
+          setLegalBusinessName(infoData.legalBusinessName || '');
           setBusinessType(infoData.businessType || '');
           setEin(infoData.ein || '');
           setContactFirstName(infoData.contactFirstName || '');
@@ -112,7 +114,7 @@ export default function SMSOnboarding() {
   };
 
   const validateForm = () => {
-    if (!profile.businessName.trim()) return 'Business name is required';
+    if (!legalBusinessName.trim()) return 'Legal business name is required';
     if (!profile.website.trim()) return 'Website (or public Facebook page URL) is required — carriers use it to verify your business';
     if (!profile.address.trim()) return 'Street address is required';
     if (!profile.city.trim()) return 'City is required';
@@ -143,7 +145,8 @@ export default function SMSOnboarding() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessName: profile.businessName.trim(),
+          // Brand falls back to the legal name when the customer operates under it.
+          businessName: profile.businessName.trim() || legalBusinessName.trim(),
           website: profile.website.trim(),
           phone: profile.phone.trim(),
           address: profile.address.trim(),
@@ -161,6 +164,7 @@ export default function SMSOnboarding() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          legalBusinessName: legalBusinessName.trim(),
           businessType,
           ein: ein.trim(),
           contactFirstName: contactFirstName.trim(),
@@ -354,15 +358,40 @@ export default function SMSOnboarding() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business name *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Legal business name *</label>
+              <input
+                type="text"
+                value={legalBusinessName}
+                onChange={(e) => setLegalBusinessName(e.target.value)}
+                placeholder="Mike's Plumbing, LLC"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Exactly as it appears on your IRS EIN letter or state registration, including punctuation.
+                Carriers reject verifications when this doesn&apos;t match official records.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Brand name customers know you by (if different)</label>
               <input
                 type="text"
                 value={profile.businessName}
                 onChange={setField('businessName')}
-                placeholder="Mike's Plumbing LLC"
+                placeholder="Mike's Plumbing"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
               />
+              <p className="text-xs text-gray-400 mt-1">Leave blank if you operate under your legal name.</p>
             </div>
+
+            {legalBusinessName.trim() && profile.businessName.trim() &&
+              legalBusinessName.trim().toLowerCase() !== profile.businessName.trim().toLowerCase() && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                <strong>Heads up:</strong> carriers will visit your website to confirm these names belong together.
+                If your site only shows &quot;{profile.businessName.trim()}&quot;, add a line to your site footer like:{' '}
+                <em>&quot;{profile.businessName.trim()} is operated by {legalBusinessName.trim()}.&quot;</em>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
