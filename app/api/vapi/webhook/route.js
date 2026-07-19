@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
 import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
+import { processVoiceDocumentFollowup } from '@/lib/voice-document-followup.js';
 import crypto from 'crypto';
 
 export async function POST(request) {
@@ -103,6 +104,16 @@ export async function POST(request) {
           });
           console.log(`🔥 Hot voice lead detected for ${callerPhone} (score: ${hotScore})`);
         }
+
+        // 5. Document follow-up: caller asked for documents -> email the links
+        await processVoiceDocumentFollowup({
+          customerId: owner.customer_id,
+          clerkUserId: owner.clerk_user_id,
+          vapiCallId: call.id,
+          callerPhone,
+          transcript,
+          existingContact: contactResult?.contact || null,
+        }).catch(() => {});
       }
 
       console.log(`✅ Vapi call processed: ${call.id}, duration=${durationSeconds}s, caller=${callerPhone}`);
