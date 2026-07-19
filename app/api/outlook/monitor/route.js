@@ -5,6 +5,8 @@ import { generateAIResponse } from '@/lib/ai-service.js';
 import { checkEmailFilter } from '@/lib/email-filtering.js';
 import { createOrUpdateContact, trackLeadEvent } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
+import { runTriage } from '@/lib/intent-triage-store.js';
+import { conservativeReply } from '@/lib/intent-triage.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,7 +173,8 @@ async function processAccount(conn) {
         continue;
       }
 
-      // Get/build conversation history for this thread
+      // Get/build conversation history for this thread (also tells triage
+      // whether this is a reply to a thread the AI already participated in)
       const threadMessages = await query(
         `SELECT content, ai_response FROM outlook_messages om
          JOIN outlook_conversations oc ON oc.id = om.conversation_id
@@ -185,24 +188,46 @@ async function processAccount(conn) {
         { role: 'assistant', content: r.ai_response },
       ]).filter(m => m.content);
 
-      // Generate AI reply
-      const aiResult = await generateAIResponse({
-        userMessage: bodyText,
-        channel: 'email',
-        clerkUserId: customer.clerk_user_id,
-        contactEmail: fromEmail,
-        conversationHistory: history,
+      // ── INTENT TRIAGE: classify BEFORE the AI is allowed to reply ─────────
+      const triage = await runTriage({
+        customerId: customer.id,
+        channel: 'outlook',
+        messageId: msg.id,
+        threadId: msg.conversationId,
+        fromEmail,
+        fromName,
+        subject: msg.subject || '',
+        body: bodyText,
+        isReplyToOurThread: threadMessages.rows.some(r => r.ai_response),
       });
 
-      if (!aiResult?.success || !aiResult?.response) {
-        diag.skippedNoAi = (diag.skippedNoAi || 0) + 1;
-        diag.aiInfo = {
-          success: aiResult?.success ?? null,
-          hasResponse: !!aiResult?.response,
-          error: aiResult?.error || aiResult?.metadata?.error || null,
-        };
-        continue;
+      // Decide what (if anything) we send
+      let replyText = null;
+      let aiResult = null;
+
+      if (triage.action === 'reply' || triage.action === 'replied') {
+        aiResult = await generateAIResponse({
+          userMessage: bodyText,
+          channel: 'email',
+          clerkUserId: customer.clerk_user_id,
+          contactEmail: fromEmail,
+          conversationHistory: history,
+        });
+        if (!aiResult?.success || !aiResult?.response) {
+          diag.skippedNoAi = (diag.skippedNoAi || 0) + 1;
+          diag.aiInfo = {
+            success: aiResult?.success ?? null,
+            hasResponse: !!aiResult?.response,
+            error: aiResult?.error || aiResult?.metadata?.error || null,
+          };
+          continue;
+        }
+        replyText = aiResult.response;
+      } else if (triage.action === 'conservative_reply') {
+        // One content-free reply; the email is also flagged "Left for you"
+        replyText = conservativeReply(triage.businessName || customer.business_name);
       }
+      // 'flag' and 'skip'/'skipped': replyText stays null — no send
 
       // Ensure the conversation exists (needed before we can record the message)
       await ensureTables();
@@ -238,26 +263,42 @@ async function processAccount(conn) {
 
       // CLAIM the message first: insert the dedup row before sending. If the row
       // already exists (another run handled it), we get no row back and skip the
-      // send — this makes double-replies impossible.
+      // send — this makes double-replies impossible. Flagged/skipped messages
+      // claim with ai_response NULL so hourly cron runs don't reclassify them.
       const claim = await query(
         `INSERT INTO outlook_messages (conversation_id, outlook_message_id, direction, content, ai_response, sent_at)
          VALUES ($1, $2, 'inbound', $3, $4, NOW())
          ON CONFLICT (outlook_message_id) DO NOTHING
          RETURNING id`,
-        [convId, msg.id, bodyText.slice(0, 5000), aiResult.response]
+        [convId, msg.id, bodyText.slice(0, 5000), replyText]
       ).catch(() => ({ rows: [] }));
 
       if (claim.rows.length === 0) {
         diag.skippedProcessed++;
+        if (replyText) await markAsRead(accessToken, msg.id).catch(() => {});
+        continue;
+      }
+
+      if (triage.action === 'flag' || triage.action === 'flagged') {
+        // Left for the owner: no reply, and deliberately NOT marked read —
+        // it stays unread in their real Outlook inbox.
+        diag.flagged = (diag.flagged || 0) + 1;
+        console.log(`🚩 Outlook left for owner (${triage.classification.class}): ${fromEmail}`);
+        continue;
+      }
+
+      if (triage.action === 'skip' || triage.action === 'skipped') {
+        // Classifier-confirmed automated mail that slipped the pre-filter
+        diag.skippedAutomated++;
         await markAsRead(accessToken, msg.id).catch(() => {});
         continue;
       }
 
       // We own this message — send the reply and mark it read.
-      await sendReply(accessToken, msg.id, aiResult.response);
+      await sendReply(accessToken, msg.id, replyText);
       await markAsRead(accessToken, msg.id);
 
-      // Track lead
+      // Track lead (real leads and possible-leads that got the conservative reply)
       await createOrUpdateContact(customer.id, {
         email: fromEmail,
         name: fromName,
@@ -272,10 +313,8 @@ async function processAccount(conn) {
         message: bodyText,
       }).catch(() => {});
 
-      if (aiResult.hotLead?.isHotLead) {
+      if (aiResult?.hotLead?.isHotLead) {
         // hot_lead event bumps hot_lead_count → rescores → temperature 'hot'
-        // (the old updateLeadScoring call here passed the wrong arguments and
-        // silently failed — contacts never got promoted)
         await trackLeadEvent(customer.id, {
           type: 'hot_lead',
           channel: 'outlook',
@@ -293,7 +332,7 @@ async function processAccount(conn) {
       }
 
       diag.processed++;
-      console.log(`✅ Outlook replied to ${fromEmail} for ${customer.clerk_user_id}`);
+      console.log(`✅ Outlook replied to ${fromEmail} for ${customer.clerk_user_id} (triage: ${triage.classification.class}/${triage.classification.confidence})`);
 
     } catch (err) {
       diag.errors = diag.errors || [];
