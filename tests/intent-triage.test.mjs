@@ -97,3 +97,24 @@ test('prompt flags freemail senders and replies to our own threads', () => {
   assert.ok(user.includes('REPLY to a thread'));
   assert.ok(user.includes('lead score 55'));
 });
+
+test('buildTriagePrompt with null values does not throw', () => {
+  const result = buildTriagePrompt({
+    subject: null,
+    body: null,
+    fromEmail: null,
+    fromName: null,
+    businessName: null,
+    industry: null,
+    businessDescription: null,
+    contactSummary: null,
+  });
+  assert.ok(result.system);
+  assert.ok(result.user);
+  assert.ok(typeof result.system === 'string');
+  assert.ok(typeof result.user === 'string');
+});
+
+test('decideAction(null) fails safe to conservative_reply', () => {
+  assert.equal(decideAction(null).action, 'conservative_reply');
+});
