@@ -6,7 +6,6 @@ import { checkEmailFilter } from '@/lib/email-filtering.js';
 import { generateGmailResponse } from '@/lib/ai-service.js';
 // 🎯 NEW IMPORT: Add the leads service for contact management
 import { createOrUpdateContact, trackLeadEventWithContact, updateLeadScoring } from '@/lib/leads-service.js';
-import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import { runTriage } from '@/lib/intent-triage-store.js';
 import { conservativeReply } from '@/lib/intent-triage.js';
 
@@ -525,6 +524,10 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
               body = messageData.data.snippet || '';
             }
 
+            // Declared here (not inside the `if (customerSettings)` block below) so
+            // it's still in scope at the emailDetails.push() after that block closes.
+            let triage = null;
+
             // 🎯 CHECK BUSINESS RULES FIRST
             if (customerSettings) {
               const businessRules = checkBusinessRules(
@@ -589,7 +592,6 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
               }
 
               // ── INTENT TRIAGE: classify before anything treats this as a lead ──
-              let triage = null;
               if (customerSettings.customer_id) {
                 try {
                   const aiThreadCheck = await query(
