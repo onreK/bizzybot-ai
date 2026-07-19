@@ -7,6 +7,8 @@ import { generateGmailResponse } from '@/lib/ai-service.js';
 // 🎯 NEW IMPORT: Add the leads service for contact management
 import { createOrUpdateContact, trackLeadEventWithContact, updateLeadScoring } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
+import { runTriage } from '@/lib/intent-triage-store.js';
+import { conservativeReply } from '@/lib/intent-triage.js';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -586,8 +588,39 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
                 }
               }
 
-              // Email passed all filters (or is whitelisted) — now create the lead
+              // ── INTENT TRIAGE: classify before anything treats this as a lead ──
+              let triage = null;
               if (customerSettings.customer_id) {
+                try {
+                  const aiThreadCheck = await query(
+                    `SELECT 1 FROM gmail_messages gm
+                     JOIN gmail_conversations gc ON gm.conversation_id = gc.id
+                     WHERE gc.thread_id = $1 AND gm.is_ai_response = true LIMIT 1`,
+                    [messageData.data.threadId]
+                  ).catch(() => ({ rows: [] }));
+
+                  triage = await runTriage({
+                    customerId: customerSettings.customer_id,
+                    channel: 'gmail',
+                    messageId: message.id,
+                    threadId: messageData.data.threadId,
+                    fromEmail: customerEmail,
+                    fromName: customerName,
+                    subject: subjectHeader?.value || '',
+                    body: body,
+                    isReplyToOurThread: aiThreadCheck.rows.length > 0,
+                  });
+                } catch (triageErr) {
+                  console.error('⚠️ Gmail triage failed during check:', triageErr.message);
+                }
+              }
+              const triageSaysLead = !triage ||
+                ['replied', 'reply', 'conservative_reply'].includes(triage.action);
+
+              // Email passed all filters (or is whitelisted) — now create the lead
+              // (but NOT for business correspondence / automated mail: a support
+              // engineer must never become a contact, let alone a hot lead)
+              if (customerSettings.customer_id && triageSaysLead) {
                 try {
                   // Deduplicate: only log once per Gmail message ID
                   const alreadyLogged = await query(
@@ -626,12 +659,6 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
                         }
                       );
                       await updateLeadScoring(customerSettings.customer_id, contactResult.contact.id);
-                      await sendHotLeadAlert(customerSettings.clerk_user_id, {
-                        contactEmail: fromEmail,
-                        channel: 'email',
-                        message: emailText,
-                        score: hotLeadScore || 80,
-                      });
                     }
                   }
                 } catch (contactError) {
@@ -653,7 +680,13 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
               fullBody: body,
               snippet: messageData.data.snippet,
               receivedTime: new Date(parseInt(messageData.data.internalDate)).toLocaleString(),
-              isUnread: messageData.data.labelIds?.includes('UNREAD') || false
+              isUnread: messageData.data.labelIds?.includes('UNREAD') || false,
+              triage: triage ? {
+                class: triage.classification.class,
+                confidence: triage.classification.confidence,
+                reason: triage.classification.reason,
+                action: triage.action,
+              } : null
             });
 
             processedCount++;
@@ -901,6 +934,59 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
       console.log(`✅ Email from ${fromEmail} passed all filters - preparing response`);
     }
 
+    // ── INTENT TRIAGE: the send gate. Only high-confidence leads earn an
+    // automatic AI reply; ambiguous email gets one conservative reply; business
+    // correspondence and automated mail are never auto-replied to. ───────────
+    let triageAction = 'reply';
+    let triageBusinessName = customerSettings?.business_name || '';
+    if (customerSettings?.customer_id) {
+      try {
+        const aiThreadCheck = await query(
+          `SELECT 1 FROM gmail_messages gm
+           JOIN gmail_conversations gc ON gm.conversation_id = gc.id
+           WHERE gc.thread_id = $1 AND gm.is_ai_response = true LIMIT 1`,
+          [messageData.data.threadId]
+        ).catch(() => ({ rows: [] }));
+
+        const triage = await runTriage({
+          customerId: customerSettings.customer_id,
+          channel: 'gmail',
+          messageId: emailId,
+          threadId: messageData.data.threadId,
+          fromEmail: replyToEmail,
+          fromName: customerName,
+          subject: subject,
+          body: originalBody,
+          isReplyToOurThread: aiThreadCheck.rows.length > 0,
+        });
+        triageAction = triage.action;
+        if (triage.businessName) triageBusinessName = triage.businessName;
+
+        if (['flag', 'flagged', 'skip', 'skipped'].includes(triageAction) && !customResponse) {
+          console.log(`🚩 Gmail triage blocked auto-reply to ${replyToEmail}: ${triage.classification.class}/${triage.classification.confidence}`);
+          return NextResponse.json({
+            success: false,
+            triageFlagged: true,
+            triageClass: triage.classification.class,
+            reason: triage.classification.reason,
+            message: `This email was classified as ${triage.classification.class.replace(/_/g, ' ')} and left for you — no automatic reply sent.`,
+          });
+        }
+      } catch (triageErr) {
+        // Fail safe: a triage system error must not let a reply through unvetted
+        console.error('❌ Gmail triage error — blocking auto-reply:', triageErr.message);
+        if (!customResponse) {
+          return NextResponse.json({
+            success: false,
+            triageFlagged: true,
+            triageClass: 'ambiguous',
+            reason: `triage error: ${triageErr.message}`,
+            message: 'Could not classify this email — left for you, no automatic reply sent.',
+          });
+        }
+      }
+    }
+
     // ── Dedup claim ──────────────────────────────────────────────────────────
     // Gmail lacks the modify scope (no $15k audit), so we can't mark emails
     // read. The database is our dedup: claim this message BEFORE generating or
@@ -940,6 +1026,12 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
       // 🎯 GENERATE AI RESPONSE USING CENTRALIZED SERVICE
       console.log('🧠 Using centralized AI service from lib/ai-service.js...');
 
+      if (triageAction === 'conservative_reply') {
+        // Ambiguous email: one content-free reply, no AI generation, and the
+        // email stays flagged "Left for you" in the dashboard.
+        aiText = conservativeReply(triageBusinessName);
+      }
+
       // Load prior messages from this Gmail thread for conversation context
       let conversationHistory = [];
       try {
@@ -970,6 +1062,7 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
       }
 
       try {
+        if (triageAction === 'conservative_reply') throw { conservativeShortCircuit: true };
         // Call your centralized AI service
         const aiResult = await generateGmailResponse(
           connection.email,          // customerEmail (the BizzyBot user's Gmail)
@@ -995,14 +1088,18 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
         }
         
       } catch (aiError) {
+        if (aiError?.conservativeShortCircuit) {
+          // aiText already holds the conservative reply — nothing to do
+        } else {
         console.error('❌ Centralized AI generation failed:', aiError.message);
-        
+
         // Fallback response
         const businessName = customerSettings?.business_name || 'our team';
         aiText = `Thank you for reaching out to ${businessName}. We've received your message and will provide you with detailed information shortly.
 
 Best regards,
 ${businessName}`;
+        }
       }
     }
     
