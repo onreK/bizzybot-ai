@@ -22,7 +22,7 @@
 
 ---
 
-### Task 1: "When to send" field + sharper selection rules (text channels)
+### Task 1: "When to send" field + sharper selection rules (text channels) ✅ DONE 2026-07-18 (live-verified via widget chat)
 
 **Files:**
 - Modify: `app/(dashboard)/ai-settings/page.js` (documents editor, ~lines 127–176)
@@ -93,7 +93,7 @@ git push origin main
 
 ---
 
-### Task 2: Voice prompt documents section + secret-gated Vapi sync route
+### Task 2: Voice prompt documents section + secret-gated Vapi sync route ✅ DONE 2026-07-18 (verified on Vapi assistant)
 
 **Files:**
 - Modify: `app/api/vapi/provision/route.js` (`getVoiceSettings`, ~lines 34–50)
@@ -199,7 +199,7 @@ git push origin main
 
 ---
 
-### Task 3: Post-call extraction → branded email → contact capture / no-email note
+### Task 3: Post-call extraction → branded email → contact capture / no-email note ✅ DONE 2026-07-19 (simulated-webhook verified; contact fill switched to targeted UPDATE after unique-constraint bug; email-capture hardened after real-call phantom-dot bug — prompt + extraction rules)
 
 **Files:**
 - Create: `lib/voice-document-followup.js`
@@ -380,7 +380,7 @@ git push origin main
 
 ---
 
-### Task 4: Real-call verification + close-out
+### Task 4: Real-call verification + close-out ⏸️ PENDING 2026-07-19 — first real call exposed the phantom-dot bug (fixed, assistant re-synced); RETEST blocked overnight by carrier-side toll-free routing (calls from 858-900-4220 created NO Twilio call records ~03:00 UTC; app/Twilio config/Vapi all verified healthy). Retest in daylight; if calls still vanish across carriers → Twilio ticket. Test doc "BizzyBot Pricing Guide" still on 863 voice channel.
 
 **Files:** none (operational) + plan checkboxes.
 

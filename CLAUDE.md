@@ -258,7 +258,11 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — updated 2026-07-13)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-19)
+
+**📌 PINNED 07-19 (~3AM): Documents Phase A — one retest from done.** Tasks 1-3 built+verified (doc targeting w/ 'when' field · voice email delivery · post-call pipeline; see `docs/superpowers/plans/2026-07-18-documents-phase-a.md`). First real call exposed a phantom-dot email bug (extraction emailed kerno.junk@ instead of kernojunk@) — FIXED (prompt + extraction hardening, assistant re-synced, verified live on Vapi). **Task 4 retest blocked overnight**: founder's calls to (866) 944-5685 stopped reaching Twilio entirely (no call records — carrier-side toll-free routing, same self-healing pattern as 07-12; app/Twilio/Vapi all verified healthy). **DO: retest call in daylight** (ask for pricing guide, spell kernojunk@gmail.com, expect exact letter-by-letter read-back, email to the RIGHT address) → then mark Task 4, move feature to Completed, decide fate of test doc "BizzyBot Pricing Guide" on 863's voice channel. If calls still vanish across carriers → Twilio ticket. Parked decisions: "text you the link" for mobile callers (recommended next); Phase B storage/attachments + Phase C receiving deferred. Also same-day: TFV self-service shipped (branded /sms-optin+/sms-terms, legal-vs-brand DBA, /api/admin/resubmit-tfv + /api/admin/sync-vapi ops routes, status card); JPH resubmission parked on their NEW LLC (old one in bad standing).
+
+### Carried TODO from 2026-07-13 (still valid below)
 
 **🎉 FIRST REAL CUSTOMER: the solar company SIGNED UP 2026-07-13** — founder doing manual white-glove onboarding. ⚠️ Their account is SEPARATE from customer 863 (863 = founder's test account with the FAKE "Sunrise Solar" demo persona — do NOT edit 863 for the real customer; get their actual account first). Rushing to get their toll-free number online for marketing. TFV must pass first try: legal business name matches records, official-domain business email (NOT Gmail — that rejected 863), EIN if LLC/corp, real-person authorized contact. Number instant, SMS ~3-5 day approval, voice immediate. HOLD email onboarding for them until intent-triage ships.
 
