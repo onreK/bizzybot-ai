@@ -13,6 +13,7 @@ export default authMiddleware({
     "/api/contact",
     "/api/sms/webhook",
     "/api/admin/resubmit-tfv",       // CRON_SECRET-gated ops tool (server-to-server, no Clerk session)
+    "/api/admin/sync-vapi",          // CRON_SECRET-gated ops tool (server-to-server, no Clerk session)
     "/api/voice/(.*)",               // Twilio voice routing (TwiML) — no Clerk session
     "/api/facebook/webhook",
     "/api/instagram/webhook",        // Instagram webhook (public)

@@ -33,14 +33,14 @@ async function ensureVapiSchema() {
 
 async function getVoiceSettings(customerId) {
   const result = await query(
-    `SELECT business_name, business_description, knowledge_base, custom_instructions, response_tone
+    `SELECT business_name, business_description, knowledge_base, custom_instructions, response_tone, documents
      FROM ai_channel_settings WHERE customer_id = $1 AND channel = 'voice' LIMIT 1`,
     [customerId]
   ).catch(() => ({ rows: [] }));
   // Fall back to 'text' settings if voice not yet seeded
   if (result.rows.length === 0) {
     const fallback = await query(
-      `SELECT business_name, business_description, knowledge_base, custom_instructions, response_tone
+      `SELECT business_name, business_description, knowledge_base, custom_instructions, response_tone, documents
        FROM ai_channel_settings WHERE customer_id = $1 AND channel = 'text' LIMIT 1`,
       [customerId]
     ).catch(() => ({ rows: [] }));
