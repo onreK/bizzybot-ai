@@ -152,6 +152,16 @@ function SharedFields({ channel, ch, update, accentColor = 'text-violet-400' }) 
                   }}
                   className={inputClass}
                 />
+                <input
+                  placeholder="When should the AI send this? (optional — e.g. when the lead asks about payment plans)"
+                  value={doc.when || ''}
+                  onChange={e => {
+                    const next = [...(ch.documents || [])];
+                    next[i] = { ...next[i], when: e.target.value };
+                    update(channel, 'documents', next);
+                  }}
+                  className={inputClass}
+                />
               </div>
               <button
                 onClick={() => {
@@ -164,7 +174,7 @@ function SharedFields({ channel, ch, update, accentColor = 'text-violet-400' }) 
             </div>
           ))}
           <button
-            onClick={() => update(channel, 'documents', [...(ch.documents || []), { description: '', link: '' }])}
+            onClick={() => update(channel, 'documents', [...(ch.documents || []), { description: '', link: '', when: '' }])}
             className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
           >
             <span className="text-lg leading-none">+</span> Add document
