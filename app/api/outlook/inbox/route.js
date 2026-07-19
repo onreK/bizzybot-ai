@@ -32,9 +32,16 @@ export async function GET() {
         oc.contact_email,
         oc.contact_name,
         oc.subject,
-        oc.conversation_id
+        oc.conversation_id,
+        et.class      AS triage_class,
+        et.confidence AS triage_confidence,
+        et.reason     AS triage_reason,
+        et.action     AS triage_action,
+        et.corrected_class AS triage_corrected_class
       FROM outlook_messages om
       JOIN outlook_conversations oc ON oc.id = om.conversation_id
+      LEFT JOIN email_triage et
+        ON et.channel = 'outlook' AND et.message_id = om.outlook_message_id
       WHERE oc.clerk_user_id = $1 AND om.direction = 'inbound'
       ORDER BY om.created_at DESC
       LIMIT 50
@@ -53,6 +60,13 @@ export async function GET() {
       receivedTime: timeAgo(row.created_at),
       receivedAt: row.created_at,
       source: 'outlook',
+      triage: row.triage_class ? {
+        class: row.triage_class,
+        confidence: row.triage_confidence,
+        reason: row.triage_reason,
+        action: row.triage_action,
+        correctedClass: row.triage_corrected_class,
+      } : null,
     }));
 
     return NextResponse.json({ success: true, emails });
