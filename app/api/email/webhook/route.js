@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 // Use YOUR existing database functions
-import { 
+import {
   getCustomerByClerkId,
   createConversation,
   addMessage,
@@ -12,18 +12,9 @@ import {
 } from '../../../../lib/database.js';
 // Import centralized AI service
 import { generateAIResponse } from '../../../../lib/ai-service.js';
+import { scoreKeywordMatches } from '../../../../lib/hot-lead-keywords.js';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-
-// Hot lead detection keywords (for backward compatibility)
-const HOT_LEAD_KEYWORDS = [
-  'urgent', 'asap', 'immediately', 'emergency', 'deadline',
-  'budget', 'price', 'cost', 'money', 'payment', 'buy', 'purchase',
-  'interested', 'ready to start', 'when can we', 'schedule',
-  'meeting', 'call me', 'phone', 'contact',
-  'problem', 'issue', 'broken', 'not working', 'help',
-  'competitor', 'other company', 'comparing', 'quote'
-];
 
 export async function POST(request) {
   console.log('📧 === EMAIL WEBHOOK WITH CENTRALIZED AI SERVICE ===');
@@ -156,15 +147,11 @@ export async function POST(request) {
       knowledgeBaseUsed: aiResult.metadata?.knowledgeBaseUsed || false
     });
 
-    // Handle hot lead detection using YOUR existing function
-    const messageText = text.toLowerCase();
-    const keywordMatches = HOT_LEAD_KEYWORDS.filter(keyword => 
-      messageText.includes(keyword.toLowerCase())
-    );
-
-    // Use centralized AI hot lead detection (more advanced) OR fallback to keywords
-    const isHotLead = aiResult.hotLead?.isHotLead || keywordMatches.length > 0;
-    const hotLeadScore = aiResult.hotLead?.score || (keywordMatches.length * 25);
+    // Keywords may only nudge (capped at 45 < hot threshold 60) — only the
+    // AI scorer can mark a lead hot.
+    const { matches: keywordMatches, score: keywordScore } = scoreKeywordMatches(text);
+    const isHotLead = aiResult.hotLead?.isHotLead || false;
+    const hotLeadScore = aiResult.hotLead?.score || keywordScore;
 
     if (isHotLead) {
       // Create hot lead using YOUR existing function
