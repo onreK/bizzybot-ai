@@ -941,6 +941,18 @@ async function respondToEmail(gmail, connection, dbConnectionId, emailId, custom
     // correspondence and automated mail are never auto-replied to. ───────────
     let triageAction = 'reply';
     let triageBusinessName = customerSettings?.business_name || '';
+    // Fail closed: if we can't identify the customer we can't classify the
+    // email — never send an unvetted automatic reply.
+    if (!customResponse && !customerSettings?.customer_id) {
+      console.error('❌ Gmail triage gate: no customer context — blocking auto-reply (fail closed)');
+      return NextResponse.json({
+        success: false,
+        triageFlagged: true,
+        triageClass: 'ambiguous',
+        reason: 'customer lookup failed — could not classify',
+        message: 'Could not classify this email — left for you, no automatic reply sent.',
+      });
+    }
     if (customerSettings?.customer_id) {
       try {
         const aiThreadCheck = await query(

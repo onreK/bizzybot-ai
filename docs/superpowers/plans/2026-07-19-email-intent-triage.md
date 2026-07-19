@@ -16,7 +16,7 @@
 - Conservative reply template (spec verbatim, plus business name): `Thanks for reaching out to ${businessName} — happy to help! Could you share a bit more about what you're looking for?`
 - Classifier returns strict JSON `{ class, confidence: high|medium|low, reason }`; classes are exactly `new_lead`, `existing_lead_reply`, `business_correspondence`, `automated`, `ambiguous`.
 - Two-tier models: `gpt-4o-mini` first; non-high confidence gets ONE second opinion from `gpt-4o`, whose answer is final.
-- Never a second automatic reply on a thread that already carries an unresolved flag.
+- Never a second automatic CONSERVATIVE reply on a thread that already carries an unresolved flag (a high-confidence lead classification on a flagged thread may still auto-reply — deliberate speed-to-lead tradeoff, per the spec's ambiguous-row scope).
 - Eval gate: business_correspondence recall must be 100% on the eval set, ZERO business_correspondence emails may classify as high-confidence lead, ≥90% overall — before the monitors are wired (Tasks 5+ depend on Task 4 passing).
 - No real-estate-only or industry-specific language anywhere (BizzyBot is multi-industry).
 - Existing automated-sender detection (`checkEmailFilter`) stays as the pre-filter IN FRONT of the classifier — do not remove or reorder it.

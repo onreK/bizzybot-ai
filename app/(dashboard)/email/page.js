@@ -511,8 +511,11 @@ export default function CompleteEmailSystem() {
       if (autoPollStatus.isEnabled && emails.length > 0) {
         console.log('ðŸ¤– Processing emails with AI responses...');
         
-        // Process up to 2 emails at a time
-        const emailsToProcess = emails.slice(0, 2);
+        // Process up to 2 emails at a time — filter out flagged/skipped first
+        // so they don't permanently occupy the per-cycle slots and starve
+        // real leads (flagged Gmail emails never leave the unread list).
+        const actionable = emails.filter(e => !['flag', 'flagged', 'skip', 'skipped'].includes(e.triage?.action));
+        const emailsToProcess = actionable.slice(0, 2);
         let responsesGenerated = 0;
         
         for (let i = 0; i < emailsToProcess.length; i++) {
