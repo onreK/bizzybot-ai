@@ -294,6 +294,14 @@ async function processAccount(conn) {
         continue;
       }
 
+      if (!replyText) {
+        // Fail-safe: unrecognized triage action — treat like a flag (never
+        // send, never mark read) rather than falling through to an empty send.
+        diag.flagged = (diag.flagged || 0) + 1;
+        console.error(`⚠️ Outlook triage returned unknown action "${triage.action}" for ${msg.id} — defaulting to flag (no reply)`);
+        continue;
+      }
+
       // We own this message — send the reply and mark it read.
       await sendReply(accessToken, msg.id, replyText);
       await markAsRead(accessToken, msg.id);
