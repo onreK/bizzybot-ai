@@ -181,6 +181,7 @@ BizzyBot gives businesses an AI agent that:
 - Privacy policy — CTIA SMS disclosure added
 - Terms of Service — SMS messaging section added
 - Voice AI (Vapi) — per-plan minute limits (Starter 15, Pro 100, Biz 400), upgrade prompt, voice tab in AI Settings
+- Email intent triage — every inbound email classified (5 classes, two-tier gpt-4o-mini→gpt-4o, asymmetric caution) before any AI reply; "Left for you" inbox flags + one-click corrections feed few-shot learning; eval-gated (scripts/triage-eval.mjs); HOT_LEAD_KEYWORDS de-fanged (shared lib/hot-lead-keywords.js, capped below hot threshold)
 
 ### ⏳ Waiting on External Approvals
 - **Twilio SMS — PIVOTED TO TOLL-FREE (2026-07-05)** — the A2P 10DLC campaign path is abandoned
@@ -260,7 +261,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ## ☀️ NEXT SESSION TODO (start here — updated 2026-07-19 morning)
 
-**🥇 TOP PRIORITY: build EMAIL INTENT TRIAGE** — spec approved at `docs/superpowers/specs/2026-07-19-intent-triage-design.md` (flag-first asymmetric caution, 5 quality layers incl. labeled eval set + correction loop, ambiguous = one conservative reply + flag, hot-lead keyword de-fang). Next step: superpowers:writing-plans → implement → founder reconnects Outlook after the eval set passes. This unblocks the email channel (disconnected since 07-11).
+**📧 INTENT TRIAGE SHIPPED — founder: reconnect Outlook** (Email → Setup), then send one vendor-style email + one lead-style email to verify live: vendor gets NO reply + amber "Left for you" flag; lead gets an AI reply. Success criterion: one week of real traffic, zero wrong-target auto-replies.
 
 **📧 07-19: RESEND OUTAGE FOUND & FIXED** — bizzybotai.com had NO domain on the Resend account (lost during the 07-09 M365 DNS rework): ALL platform emails silently 403'd for ~a week while logs claimed success. Fixed: domain re-registered + 3 DNS records at Namecheap (send subdomain + resend._domainkey, coexists with M365), VERIFIED; new `lib/resend-send.js` — all live senders now check Resend's response (never bypass it for new email features). New aliases on the Drayke mailbox: **alerts@** + **support@** bizzybotai.com — both VERIFIED receiving 07-19 (gotcha: had to be added in the EXCHANGE admin center, not just M365 admin — admin-center-only aliases bounce 5.1.10). support@ = official support address — still needs adding to landing footer / privacy / SMS-terms pages.
 
@@ -272,7 +273,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 **0. [ ] FRESH-SIGNUP WALKTHROUGH (top priority, still not done):** founder creates a junk-email account and walks the exact trial path — sign up → dashboard → SMS onboarding (buys a real number, ~$2) → text it → AI replies. Watch Railway logs during. Final onboarding confidence check; all code-side blockers cleared (Stripe webhook was broken 3 ways — fixed 07-10; scoring/memory rebuilt 07-11). Watch the scoring arc while testing: first text (warm-ish) → pricing question (score climbs) → booking (flips hot + $ value). NOTE: SMS memory only reaches back to 07-10 (persistence start); voice memory now flows into text/email/chat.
 
-**1. [ ] Build INTENT TRIAGE (roadmap item #0) BEFORE reconnecting Outlook** — the AI auto-replied to Microsoft Support asking about their roof + marked the support engineer a $18k HOT lead. Classify inbound email (lead / existing-lead reply / business-correspondence=flag-don't-reply / automated / ambiguous) + de-fang HOT_LEAD_KEYWORDS (drop help/issue/contact/problem). Outlook is disconnected from BizzyBot until this ships. See [[ai-brain-roadmap]] memory.
+**1. [x] ~~Build INTENT TRIAGE (roadmap item #0) BEFORE reconnecting Outlook~~ — SHIPPED 2026-07-19 (see Completed). Outlook reconnect unblocked.
 
 **Post-demo cleanup:**
 2. [ ] **Revert demo persona when demo phase ends**: customers.business_name 'Sunrise Solar' → 'Bizzy Bot Ai LLC' + re-skin ai_channel_settings (memory: demo-solar-persona); decide on avg_job_value 18000. Keep hot_lead_detection=true.
