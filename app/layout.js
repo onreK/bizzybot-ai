@@ -12,7 +12,7 @@ export const metadata = {
     template: '%s | BizzyBot',
   },
   description:
-    'The AI receptionist that answers every call, text, email, web chat, and social DM — then captures, scores, and nurtures every lead and books appointments on your calendar. From $29/mo. 14-day free trial.',
+    'AI receptionist that answers calls, texts, emails, chat & social DMs — captures, scores & books every lead. From $29/mo, 14-day free trial.',
   keywords:
     'AI receptionist, AI answering service, missed call text back, AI phone answering, AI receptionist for small business, lead capture software, AI appointment booking',
   authors: [{ name: 'BizzyBot' }],
