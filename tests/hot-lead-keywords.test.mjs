@@ -30,7 +30,7 @@ test('real buying signals still register', () => {
 });
 
 test('shopping-around signals count again (re-added 2026-07-20)', () => {
-  const { matches, score } = scoreKeywordMatches('your competitor quoted me less and I am talking to another company too');
+  const { matches, score } = scoreKeywordMatches('your competitor is cheaper and I am talking to another company too');
   assert.ok(matches.includes('competitor'));
   assert.ok(matches.includes('other company')); // "another company" contains it
   assert.equal(score, 30);
