@@ -118,6 +118,20 @@ BizzyBot gives businesses an AI agent that:
 | `BIZZYFOUNDER` | 50% off | 12 months |
 | `BIZZYFRIEND` | 20% off | 3 months |
 
+### Profit margins at FULL usage (exact rates, computed 2026-07-20)
+
+Both meters (AI responses + voice minutes) maxed out. Margin swings hugely by channel mix — SMS carries real per-message carrier fees, email/chat is nearly free:
+
+| | Starter $29 | Professional $69 | Business $199 |
+|---|---|---|---|
+| Worst case (all responses as SMS) | cost $12.52 → **57% margin** | cost $53.45 → **22% margin** | cost $179.22 → **10% margin** |
+| Best case (all responses as email/chat) | cost $5.05 → **83% margin** | cost $16.10 → **77% margin** | cost $54.72 → **73% margin** |
+| Realistic (mixed channels) | ~60-70% | ~45-65% | ~45-65% |
+
+All plans profitable even fully maxed. Business is the one to watch — swings from 73% down to 10% purely on channel mix, because 5,000 SMS messages ≈ $125 in real carrier fees alone.
+
+**⚠️ Discount risk flagged — the solar customer (Professional at 50% off = $34.50/mo):** re-running the SMS-heavy worst case at the discounted price gives cost $53.45 vs revenue $34.50 = **a ~$19/month LOSS if they ever max out and lean SMS-heavy simultaneously.** Unlikely (needs both meters maxed AND channel concentration), and the coupon is time-bounded (12 months), so decision is to WATCH via the Unit Economics panel rather than pre-emptively restrict — revisit if their margin row trends negative.
+
 ---
 
 ## Infrastructure
