@@ -320,6 +320,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 - Bell scope decision: add AI-booked appointments + missed calls to notifications? (Recommended; ~15 min; founder undecided.)
 - Retroactively adding a late-collected email to an already-created calendar event (deferred from book-first-then-ask-email).
 - Nice-to-haves: sidebar plan/usage card · mobile padding polish · "Apply to all channels" for Documents.
+- **Landing page animation (parked 2026-07-20, founder loves current page, wants to "spice it up"):** recommended direction = animated mock chat conversation in the hero (typing lead message → AI reply, looping) — most on-brand since it *shows* the product working, matches what Podium/GHL-style competitors do. Lighter/cheaper alternatives if preferred: scroll-triggered fade-ins on existing sections, or animated stat counters. Load frontend-design skill when this gets picked up.
 
 ---
 
