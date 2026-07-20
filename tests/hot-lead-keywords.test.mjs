@@ -29,6 +29,14 @@ test('real buying signals still register', () => {
   assert.equal(score, 30);
 });
 
+test('shopping-around signals count again (re-added 2026-07-20)', () => {
+  const { matches, score } = scoreKeywordMatches('your competitor quoted me less and I am talking to another company too');
+  assert.ok(matches.includes('competitor'));
+  assert.ok(matches.includes('other company')); // "another company" contains it
+  assert.equal(score, 30);
+  assert.ok(score < 60, 'shopping-around alone must never reach the hot threshold');
+});
+
 test('custom customer keywords still count', () => {
   const { matches } = scoreKeywordMatches('interested in solar panels', ['solar panels']);
   assert.ok(matches.includes('solar panels'));
