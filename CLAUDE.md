@@ -301,6 +301,7 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 13. [ ] Voice-to-voice memory: inject prior call summaries into Vapi at call-start ([[ai-brain-roadmap]] #7).
 
 **Product gaps / decisions parked:**
+- **"This was a lead" button semantics (triage corrections) — founder sleeping on it 2026-07-20.** Today: clicking teaches future classifications only; the flagged email still needs a hand-written reply. Option B: also have the AI reply immediately (faster speed-to-lead, but a misclick/wrong-row/misjudged click SENDS an email to a possible vendor — unrecallable). Recommended middle ground: click saves the lesson, then a small confirm — "Want the AI to reply to this one now? [Send AI reply] / [I'll reply myself]" — one deliberate second step before anything leaves. Cheap to build (~30 min). Decide before real customers use the correction buttons.
 - **Unit Economics panel uses conservative estimated rates** (founder-confirmed 2026-07-10: shown margins are likely LOWER than actual). Rates live in `UNIT_RATES` in app/api/admin/usage-costs/route.js — reconcile against real Twilio + Vapi invoices after first months of customer traffic, then tune.
 - Settings page lacks Authorized Contact name fields (pre-07-06 customers can't save Business Email — server rejects partial verification info).
 - Bell scope decision: add AI-booked appointments + missed calls to notifications? (Recommended; ~15 min; founder undecided.)
