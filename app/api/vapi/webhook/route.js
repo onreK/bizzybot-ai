@@ -48,18 +48,27 @@ export async function POST(request) {
       const summary = message.summary || call.summary || null;
       const endedReason = message.endedReason || call.endedReason || 'completed';
 
-      // 1. Save call log
+      // Vapi bills per call and includes the exact charge on the report —
+      // capture it so the admin Unit Economics panel can show actuals.
+      const callCost =
+        typeof message.cost === 'number' ? message.cost
+        : typeof call.cost === 'number' ? call.cost
+        : null;
+
+      // 1. Save call log (cost column auto-added for pre-existing tables)
+      await query(`ALTER TABLE vapi_call_logs ADD COLUMN IF NOT EXISTS cost NUMERIC`).catch(() => {});
       await query(`
         INSERT INTO vapi_call_logs
           (customer_id, clerk_user_id, vapi_call_id, caller_phone, duration_seconds,
-           status, transcript, summary, started_at, ended_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           status, transcript, summary, started_at, ended_at, cost)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ON CONFLICT (vapi_call_id) DO UPDATE SET
           duration_seconds = EXCLUDED.duration_seconds,
           status           = EXCLUDED.status,
           transcript       = EXCLUDED.transcript,
           summary          = EXCLUDED.summary,
-          ended_at         = EXCLUDED.ended_at
+          ended_at         = EXCLUDED.ended_at,
+          cost             = COALESCE(EXCLUDED.cost, vapi_call_logs.cost)
       `, [
         owner.customer_id,
         owner.clerk_user_id,
@@ -71,6 +80,7 @@ export async function POST(request) {
         summary,
         startedAt ? new Date(startedAt) : null,
         endedAt ? new Date(endedAt) : null,
+        callCost,
       ]).catch(err => console.error('⚠️ vapi_call_logs insert failed:', err.message));
 
       // 2. Create/update contact + track lead event

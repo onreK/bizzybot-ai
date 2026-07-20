@@ -34,14 +34,45 @@ const PLAN_PRICES = { starter: 29, basic: 29, professional: 69, business: 199 };
 // segments avg, voiceMinute assumes every minute is an AI minute). Reconcile
 // against actual Twilio + Vapi invoices once real customer traffic exists,
 // then tune these numbers.
+// FALLBACK rates — used only where an exact billed amount isn't available
+// (e.g. voice calls logged before cost capture shipped 2026-07-20, or when
+// the Twilio API is unreachable). Wherever possible the panel now reports
+// ACTUALS: Vapi's per-call billed cost and Twilio's per-message billed price.
 const UNIT_RATES = {
-  numberRental: 2.15,      // toll-free number, flat per month
-  smsExchange: 0.025,      // lead text + AI reply incl. carrier fees (~2 segments avg)
-  voiceMinute: 0.11,       // Vapi ~$0.09 + Twilio toll-free leg ~$0.022
-  aiReply: 0.001,          // GPT-4o-mini tokens per response (any channel)
-  stripePct: 0.029,
+  numberRental: 2.15,      // toll-free number, flat per month (this IS the exact Twilio price)
+  smsExchange: 0.025,      // fallback: lead text + AI reply (~3 segments at actual $0.0083/segment)
+  voiceMinute: 0.115,      // fallback: worst observed actual Vapi rate (Twilio voice legs: $0 billed to date)
+  aiReply: 0.0001,         // measured actual: July 2026 = $0.13 / 2,209 requests ≈ $0.00006; 0.0001 keeps margin
+  stripePct: 0.029,        // exact by formula
   stripeFlat: 0.30,
 };
+
+// Exact SMS cost for one number this calendar month, straight from Twilio's
+// per-message billed prices. Returns null on any failure → caller falls back
+// to the estimate.
+async function twilioSmsMonthCost(phoneNumber) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok || !phoneNumber) return null;
+  const now = new Date();
+  const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const authHeader = 'Basic ' + Buffer.from(`${sid}:${tok}`).toString('base64');
+  let total = 0;
+  try {
+    for (const dir of ['To', 'From']) {
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json?${dir}=${encodeURIComponent(phoneNumber)}&DateSent%3E=${monthStart}&PageSize=400`;
+      const res = await fetch(url, { headers: { Authorization: authHeader } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      for (const m of data.messages || []) {
+        if (m.price != null) total += Math.abs(parseFloat(m.price)) || 0;
+      }
+    }
+    return +total.toFixed(4);
+  } catch {
+    return null;
+  }
+}
 
 export async function GET() {
   try {
@@ -56,6 +87,9 @@ export async function GET() {
     //  - all inbound interactions (drives OpenAI cost)
     //  - AI voice minutes (vapi_call_logs)
     //  - whether they rent a number
+    // Ensure the cost column exists before selecting it (pre-2026-07-20 DBs)
+    await query(`ALTER TABLE vapi_call_logs ADD COLUMN IF NOT EXISTS cost NUMERIC`).catch(() => {});
+
     const result = await query(`
       SELECT
         c.id, c.business_name, c.email, c.plan,
@@ -63,7 +97,10 @@ export async function GET() {
         COALESCE(sms.exchanges, 0)      AS sms_exchanges,
         COALESCE(inbound.total, 0)      AS inbound_total,
         COALESCE(voice.minutes, 0)      AS voice_minutes,
-        (pn.id IS NOT NULL)             AS has_number
+        COALESCE(voice.vapi_actual, 0)  AS vapi_actual,
+        COALESCE(voice.unpriced_minutes, 0) AS unpriced_minutes,
+        (pn.id IS NOT NULL)             AS has_number,
+        pn.phone_number                 AS phone_number
       FROM customers c
       LEFT JOIN (
         SELECT customer_id, COUNT(*) AS exchanges
@@ -80,20 +117,24 @@ export async function GET() {
         GROUP BY customer_id
       ) inbound ON inbound.customer_id = c.id
       LEFT JOIN (
-        SELECT customer_id, CEIL(SUM(duration_seconds) / 60.0) AS minutes
+        SELECT customer_id,
+               CEIL(SUM(duration_seconds) / 60.0) AS minutes,
+               SUM(COALESCE(cost, 0)) AS vapi_actual,
+               CEIL(SUM(CASE WHEN cost IS NULL THEN duration_seconds ELSE 0 END) / 60.0) AS unpriced_minutes
         FROM vapi_call_logs
         WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
         GROUP BY customer_id
       ) voice ON voice.customer_id = c.id
       LEFT JOIN LATERAL (
-        SELECT id FROM customer_phone_numbers
+        SELECT id, phone_number FROM customer_phone_numbers
         WHERE clerk_user_id = c.clerk_user_id AND status = 'active'
         LIMIT 1
       ) pn ON true
       ORDER BY c.created_at DESC
     `);
 
-    const customers = result.rows.map(row => {
+    const customers = [];
+    for (const row of result.rows) {
       // Revenue only counts when there's a real Stripe subscription —
       // trial/test accounts cost money but earn nothing (the truth).
       const price = row.is_paying ? (PLAN_PRICES[row.plan] || 0) : 0;
@@ -102,14 +143,28 @@ export async function GET() {
       const voiceMinutes = parseInt(row.voice_minutes);
 
       const costNumber = row.has_number ? UNIT_RATES.numberRental : 0;
-      const costSms = smsExchanges * UNIT_RATES.smsExchange;
-      const costVoice = voiceMinutes * UNIT_RATES.voiceMinute;
+
+      // SMS: exact billed prices from Twilio when reachable, estimate otherwise
+      let costSms = smsExchanges * UNIT_RATES.smsExchange;
+      let smsBasis = 'estimate';
+      if (row.has_number && row.phone_number) {
+        const actual = await twilioSmsMonthCost(row.phone_number);
+        if (actual !== null) { costSms = actual; smsBasis = 'actual'; }
+      }
+
+      // Voice: exact Vapi per-call charges; estimate only for calls logged
+      // before cost capture existed (their cost column is NULL)
+      const vapiActual = parseFloat(row.vapi_actual) || 0;
+      const unpricedMinutes = parseInt(row.unpriced_minutes) || 0;
+      const costVoice = vapiActual + unpricedMinutes * UNIT_RATES.voiceMinute;
+      const voiceBasis = unpricedMinutes === 0 ? 'actual' : vapiActual > 0 ? 'actual+estimate' : 'estimate';
+
       const costAi = inboundTotal * UNIT_RATES.aiReply;
       const costStripe = price > 0 ? price * UNIT_RATES.stripePct + UNIT_RATES.stripeFlat : 0;
       const totalCost = costNumber + costSms + costVoice + costAi + costStripe;
       const margin = price - totalCost;
 
-      return {
+      customers.push({
         id: row.id,
         businessName: row.business_name || '(no name)',
         email: row.email,
@@ -124,10 +179,11 @@ export async function GET() {
           stripe: +costStripe.toFixed(2),
           total: +totalCost.toFixed(2),
         },
+        costBasis: { sms: smsBasis, voice: voiceBasis, number: 'actual', stripe: 'formula', openai: 'measured-rate' },
         margin: +margin.toFixed(2),
         marginPct: price > 0 ? +((margin / price) * 100).toFixed(1) : null,
-      };
-    });
+      });
+    }
 
     const totals = customers.reduce(
       (t, cu) => ({
