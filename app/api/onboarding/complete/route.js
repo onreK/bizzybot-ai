@@ -22,6 +22,11 @@ export async function POST(request) {
       knowledgeBase = '',
       phone = '',
       website = '',
+      heardAboutUs = '',
+      utmSource = '',
+      utmMedium = '',
+      utmCampaign = '',
+      referrerUrl = '',
     } = await request.json();
 
     if (!businessName?.trim()) {
@@ -38,10 +43,23 @@ export async function POST(request) {
 
     // 1. Update the customer record and mark onboarding complete
     await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`).catch(() => {});
+    // Attribution: how they said they heard about us (onboarding question) + what
+    // AttributionTracker captured on their first visit (UTM params / ?ref= / referrer).
+    await query(`
+      ALTER TABLE customers
+        ADD COLUMN IF NOT EXISTS signup_source TEXT,
+        ADD COLUMN IF NOT EXISTS utm_source TEXT,
+        ADD COLUMN IF NOT EXISTS utm_medium TEXT,
+        ADD COLUMN IF NOT EXISTS utm_campaign TEXT,
+        ADD COLUMN IF NOT EXISTS referrer_url TEXT
+    `).catch(() => {});
     const customerResult = await query(
-      `UPDATE customers SET business_name = $1, onboarding_completed = TRUE, updated_at = NOW()
+      `UPDATE customers SET
+         business_name = $1, onboarding_completed = TRUE, updated_at = NOW(),
+         signup_source = NULLIF($3, ''), utm_source = NULLIF($4, ''),
+         utm_medium = NULLIF($5, ''), utm_campaign = NULLIF($6, ''), referrer_url = NULLIF($7, '')
        WHERE clerk_user_id = $2 RETURNING id`,
-      [businessName.trim(), userId]
+      [businessName.trim(), userId, heardAboutUs, utmSource, utmMedium, utmCampaign, referrerUrl]
     );
     const customerId = customerResult.rows[0]?.id;
 

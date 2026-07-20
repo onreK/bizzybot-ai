@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, Building2, MessageSquare, BookOpen, ChevronRight, ChevronLeft, Check, Zap, Star, Shield, Clock, Phone, Globe } from 'lucide-react';
+import { getStoredAttribution } from '@/lib/attribution-client.js';
 
 const TOTAL_STEPS = 4;
 
@@ -70,6 +71,7 @@ export default function OnboardingPage() {
     tone: 'Professional',
     responseLength: 'Medium',
     knowledgeBase: '',
+    heardAboutUs: '',
   });
 
   useEffect(() => {
@@ -89,10 +91,11 @@ export default function OnboardingPage() {
   const complete = async () => {
     setSaving(true);
     try {
+      const attribution = getStoredAttribution(); // how they first found us, if known
       await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ...attribution }),
       });
     } catch (_) {}
     router.push('/dashboard');
@@ -338,6 +341,25 @@ export default function OnboardingPage() {
               bad="Our pricing varies depending on the job. Please contact us for a quote."
               good="Drain cleaning starts at $149. Emergency call-out is $75. We can usually give you an exact quote over the phone — want me to help with that?"
             />
+
+            <div>
+              <label className="text-xs text-gray-500 block mb-1.5">
+                How did you hear about us? <span className="text-gray-700">(optional)</span>
+              </label>
+              <select
+                value={form.heardAboutUs}
+                onChange={e => set('heardAboutUs', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Select one...</option>
+                <option value="google_search">Google search</option>
+                <option value="referral">A friend or colleague told me</option>
+                <option value="social_media">Social media (X, LinkedIn, Facebook, Instagram)</option>
+                <option value="ai_assistant">ChatGPT / AI assistant recommended it</option>
+                <option value="direct_contact">The founder reached out to me directly</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
         )}
 

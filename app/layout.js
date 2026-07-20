@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
+import AttributionTracker from '@/components/AttributionTracker.js';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -58,6 +59,7 @@ export default function RootLayout({ children }) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
         </head>
         <body className={`${inter.className} antialiased`}>
+          <AttributionTracker />
           <div id="__next">
             <main className="min-h-screen">
               {children}
