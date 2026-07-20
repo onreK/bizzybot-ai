@@ -96,19 +96,14 @@ BizzyBot gives businesses an AI agent that:
 | Professional | $69/mo | Businesses wanting social media channels |
 | Business | $199/mo | High-volume + voice calls |
 
-| Feature | Starter | Professional | Business |
+**NO FEATURE GATING** (founder decision, reaffirmed 2026-07-20): every plan includes the entire platform. Tiers differ ONLY by volume + seats + support. Two usage meters exist: AI responses (pooled across all channels) and Voice AI minutes (separate — voice costs ~400× an email reply). Shared display copy lives in `lib/plan-features.js` (PLATFORM_FEATURES + PLAN_VOLUME) — keep all pricing surfaces (lib/stripe.js PRICING_PLANS, /pricing, landing, Settings→Subscription) in sync with it.
+
+| | Starter | Professional | Business |
 |---|---|---|---|
-| Email AI | ✅ | ✅ | ✅ |
-| SMS AI | ✅ | ✅ | ✅ |
-| Web Chat | ✅ | ✅ | ✅ |
-| Scheduling | ✅ | ✅ | ✅ |
-| Lead tracking & export | ✅ | ✅ | ✅ |
-| Facebook Messenger AI | ❌ | ✅ | ✅ |
-| Instagram DM AI | ❌ | ✅ | ✅ |
-| Full analytics | ❌ | ✅ | ✅ |
-| AI Voice calls | ✅ (15 min/mo) | ✅ (100 min/mo) | ✅ (400 min/mo) |
 | AI responses/mo | 300 | 1,500 | 5,000 |
+| Voice AI minutes/mo | 15 | 100 | 400 |
 | User seats | 1 | 2 | 5 |
+| Priority support | — | — | ✅ |
 
 ### Stripe Price IDs
 | Plan | Price ID |

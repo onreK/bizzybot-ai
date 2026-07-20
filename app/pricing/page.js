@@ -3,22 +3,9 @@
 import { useState } from 'react';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { Check, X, Zap, Star, Crown, ArrowRight } from 'lucide-react';
+import { Check, Zap, Star, Crown, ArrowRight, Sparkles } from 'lucide-react';
 import { PRICING_PLANS } from '../../lib/stripe';
-
-const COMPARISON = [
-  { feature: 'Email AI',                  starter: true,  pro: true,  business: true  },
-  { feature: 'SMS AI',                    starter: true,  pro: true,  business: true  },
-  { feature: 'Web Chat widget',           starter: true,  pro: true,  business: true  },
-  { feature: 'Scheduling integration',    starter: true,  pro: true,  business: true  },
-  { feature: 'Lead tracking & export',    starter: true,  pro: true,  business: true  },
-  { feature: 'Facebook Messenger AI',     starter: true,  pro: true,  business: true  },
-  { feature: 'Instagram DM AI',           starter: true,  pro: true,  business: true  },
-  { feature: 'Analytics dashboard',       starter: true,  pro: true,  business: true  },
-  { feature: 'AI Voice minutes/month',    starter: '15',  pro: '100', business: '400' },
-  { feature: 'AI responses/month',        starter: '300', pro: '1,500', business: '5,000' },
-  { feature: 'User seats',               starter: '1',   pro: '2',   business: '5'   },
-];
+import { PLATFORM_FEATURES, PLAN_VOLUME } from '../../lib/plan-features';
 
 const ICONS = {
   starter:      <Zap  className="w-6 h-6 text-blue-400" />,
@@ -128,7 +115,7 @@ export default function PricingPage() {
                     <span className="text-gray-500 mb-1">/month</span>
                   </div>
                   <p className="text-gray-500 text-sm mt-1">
-                    {key === 'starter' ? 'Perfect for getting started' : key === 'professional' ? 'For businesses capturing social leads' : 'For high-volume operations'}
+                    {PLAN_VOLUME[key]?.tagline || ''}
                   </p>
                 </div>
 
@@ -170,34 +157,27 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Feature Comparison Table */}
+        {/* Everything included — no feature gates */}
         <div className="mb-20">
-          <h2 className="text-2xl font-bold text-white text-center mb-8">Full comparison</h2>
-          <div className="bg-[#161B22] border border-gray-800 rounded-2xl overflow-hidden">
-            {/* Header row */}
-            <div className="grid grid-cols-4 px-6 py-4 bg-[#0D1117] border-b border-gray-800">
-              <div className="text-gray-400 text-sm font-medium">Feature</div>
-              <div className="text-center text-blue-400 text-sm font-semibold">Starter</div>
-              <div className="text-center text-violet-400 text-sm font-semibold">Professional</div>
-              <div className="text-center text-amber-400 text-sm font-semibold">Business</div>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm font-medium mb-4">
+              <Sparkles className="w-3.5 h-3.5" />
+              No feature gates
             </div>
-
-            {COMPARISON.map(({ feature, starter, pro, business }, i) => (
-              <div key={i} className={`grid grid-cols-4 px-6 py-3.5 border-b border-gray-800/50 ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                <div className="text-gray-300 text-sm">{feature}</div>
-                {[starter, pro, business].map((val, j) => (
-                  <div key={j} className="text-center">
-                    {typeof val === 'string' ? (
-                      <span className="text-white text-sm font-medium">{val}</span>
-                    ) : val ? (
-                      <Check className="w-4 h-4 text-green-400 mx-auto" />
-                    ) : (
-                      <X className="w-4 h-4 text-gray-700 mx-auto" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
+            <h2 className="text-2xl font-bold text-white mb-2">Every plan includes the full platform</h2>
+            <p className="text-gray-400 text-sm max-w-xl mx-auto">
+              Pick a plan for your volume — everything below is yours from day one, on every tier.
+            </p>
+          </div>
+          <div className="bg-[#161B22] border border-gray-800 rounded-2xl p-8">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+              {PLATFORM_FEATURES.map((feature, i) => (
+                <div key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
+                  <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                  {feature}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

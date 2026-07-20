@@ -190,22 +190,24 @@ export default function HomePage() {
     },
   ];
 
+  // No feature gating — every plan is the full platform; tiers differ only by
+  // volume, seats, and support (see lib/plan-features.js for the shared list)
   const plans = [
     {
       name: 'Starter',
       price: '$29',
-      description: 'Solo operators and small businesses getting started with AI',
-      features: ['300 AI responses/mo', 'Voice AI — 15 min/mo', 'Email, SMS & Web Chat AI', 'Facebook & Instagram AI (coming soon)', 'Lead tracking & analytics'],
+      description: 'The full platform for solo operators getting started',
+      features: ['The full BizzyBot platform — no feature gates', '300 AI responses/mo', 'Voice AI — 15 min/mo', '1 user seat'],
       cta: 'Start free trial',
       popular: false,
     },
     {
       name: 'Professional',
       price: '$69',
-      description: 'Growing businesses that need more volume and seats',
+      description: 'The full platform, with room for steady lead flow',
       features: [
-        'Everything in Starter',
-        '1,500 AI responses/mo',
+        'The full BizzyBot platform — no feature gates',
+        '1,500 AI responses/mo — 5× the volume',
         'Voice AI — 100 min/mo',
         '2 user seats',
       ],
@@ -215,9 +217,9 @@ export default function HomePage() {
     {
       name: 'Business',
       price: '$199',
-      description: 'High-volume operations at full scale',
+      description: 'The full platform at high-volume scale',
       features: [
-        'Everything in Professional',
+        'The full BizzyBot platform — no feature gates',
         '5,000 AI responses/mo',
         'Voice AI — 400 min/mo',
         '5 user seats',

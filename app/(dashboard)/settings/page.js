@@ -545,16 +545,17 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield }
   ];
 
+  // No feature gating — every plan includes the full platform; tiers differ
+  // only by volume, seats, and support (shared copy: lib/plan-features.js)
   const availablePlans = [
     {
       id: 'starter',
       name: 'Starter',
       price: 29,
       features: [
-        '300 AI responses/month',
-        'Email, SMS & Web Chat AI',
-        'Scheduling integration',
-        'Lead tracking & export',
+        'The full BizzyBot platform — no feature gates',
+        '300 AI responses/month across every channel',
+        'Voice AI — 15 minutes/month',
         '1 user seat',
       ],
       current: subscription.plan === 'starter'
@@ -564,11 +565,9 @@ export default function SettingsPage() {
       name: 'Professional',
       price: 69,
       features: [
-        '1,500 AI responses/month',
-        'Everything in Starter',
-        'Facebook Messenger AI',
-        'Instagram DM AI',
-        'Full analytics dashboard',
+        'The full BizzyBot platform — no feature gates',
+        '1,500 AI responses/month — 5× the volume',
+        'Voice AI — 100 minutes/month',
         '2 user seats',
       ],
       current: subscription.plan === 'professional'
@@ -578,9 +577,9 @@ export default function SettingsPage() {
       name: 'Business',
       price: 199,
       features: [
+        'The full BizzyBot platform — no feature gates',
         '5,000 AI responses/month',
-        'Everything in Professional',
-        'AI Voice calls',
+        'Voice AI — 400 minutes/month',
         '5 user seats',
         'Priority support',
       ],
