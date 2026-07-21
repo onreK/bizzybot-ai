@@ -172,16 +172,19 @@ export default function HomePage() {
       icon: <Wrench className="w-5 h-5" />,
       name: 'Trades & Home Services',
       pain: 'Never miss a call from a crawlspace again. The AI answers while you\'re on the job — and texts you when it\'s a hot one.',
+      href: '/ai-receptionist-for-contractors',
     },
     {
       icon: <Home className="w-5 h-5" />,
       name: 'Real Estate',
       pain: 'The first agent to respond usually wins the listing. Your AI replies to every inquiry in seconds — even during showings.',
+      href: '/ai-receptionist-for-real-estate',
     },
     {
       icon: <Scissors className="w-5 h-5" />,
       name: 'Salons & Studios',
       pain: 'Bookings answered while your hands are busy. The AI shares your booking link and fills your calendar between clients.',
+      href: '/ai-receptionist-for-salons',
     },
     {
       icon: <HeartHandshake className="w-5 h-5" />,
@@ -586,15 +589,27 @@ export default function HomePage() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {industries.map((ind, i) => (
-                <div key={i} className="bg-[#0D1421] border border-[#1E2D40] rounded-2xl p-7 hover:border-[#2A3A55] transition-all duration-300">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-5">
-                    {ind.icon}
-                  </div>
-                  <h3 className="font-semibold text-white text-base mb-2">{ind.name}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">{ind.pain}</p>
-                </div>
-              ))}
+              {industries.map((ind, i) => {
+                const CardTag = ind.href ? 'a' : 'div';
+                return (
+                  <CardTag
+                    key={i}
+                    href={ind.href}
+                    className="block bg-[#0D1421] border border-[#1E2D40] rounded-2xl p-7 hover:border-[#2A3A55] transition-all duration-300"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-5">
+                      {ind.icon}
+                    </div>
+                    <h3 className="font-semibold text-white text-base mb-2">{ind.name}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">{ind.pain}</p>
+                    {ind.href && (
+                      <span className="inline-flex items-center gap-1 text-violet-400 text-sm font-medium mt-4">
+                        Learn more <ChevronRight className="w-4 h-4" />
+                      </span>
+                    )}
+                  </CardTag>
+                );
+              })}
             </div>
           </div>
         </section>
