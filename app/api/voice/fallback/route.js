@@ -1,6 +1,7 @@
 import { query } from '@/lib/database.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import { isValidTwilioRequest } from '@/lib/twilio-verify.js';
+import { canUseVoiceAI } from '@/lib/trial-access.js';
 import twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,24 @@ export async function POST(request) {
         to: cfg.forward_cell,
         body: `📞 Missed call from ${prettyPhone(from)}. Your BizzyBot AI is handling it — check the dashboard for the transcript.`,
       }).catch((e) => console.error('⚠️ Missed-call SMS failed:', e.message));
+    }
+
+    // Trial ended, or this month's voice minutes are used up — the owner already
+    // got the missed-call alerts above; just end the call, no AI, no message.
+    let aiAvailable = true;
+    if (cfg.clerk_user_id) {
+      const customerRow = await query(
+        `SELECT id, plan, stripe_subscription_id, created_at FROM customers WHERE clerk_user_id = $1 LIMIT 1`,
+        [cfg.clerk_user_id]
+      ).catch(() => ({ rows: [] }));
+      const customer = customerRow.rows[0];
+      if (customer) {
+        const gate = await canUseVoiceAI(customer);
+        aiAvailable = gate.allowed;
+      }
+    }
+    if (!aiAvailable) {
+      return twiml(`<Hangup/>`);
     }
 
     // Hand the live caller to the AI (Vapi's own inbound handler).

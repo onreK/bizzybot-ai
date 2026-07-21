@@ -8,7 +8,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, BarChart3, Mail, Phone, MessageCircle,
   Facebook, Instagram, Settings, Bot, LogOut, Target,
-  Bell, Flame, X, Calendar, Mic, Menu
+  Bell, Flame, X, Calendar, Mic, Menu, Lock
 } from 'lucide-react';
 
 const NAV = [
@@ -76,6 +76,7 @@ export default function DashboardLayout({ children }) {
   const [showPanel, setShowPanel] = useState(false);
   const [lastReadAt, setLastReadAt] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasAccess, setHasAccess] = useState(true);
 
   // Close the mobile drawer whenever the route changes
   useEffect(() => {
@@ -109,6 +110,25 @@ export default function DashboardLayout({ children }) {
       return () => clearInterval(interval);
     }
   }, [isSignedIn, fetchNotifications]);
+
+  const fetchAccessStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/customer/access-status');
+      if (res.ok) {
+        const data = await res.json();
+        setHasAccess(data.hasAccess !== false);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchAccessStatus();
+      // Refresh every 5 minutes — trial end / cancellation should show up promptly
+      const interval = setInterval(fetchAccessStatus, 300000);
+      return () => clearInterval(interval);
+    }
+  }, [isSignedIn, fetchAccessStatus]);
 
   const unreadCount = notifications.filter(n =>
     !lastReadAt || new Date(n.timestamp) > lastReadAt
@@ -375,6 +395,22 @@ export default function DashboardLayout({ children }) {
             )}
           </button>
         </div>
+
+        {/* Trial-ended banner — AI has stopped responding, dashboard stays viewable */}
+        {!hasAccess && pathname !== '/pricing' && (
+          <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 text-center">
+            <Lock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <span className="text-amber-200 text-xs sm:text-sm">
+              Your free trial has ended — your AI has stopped responding. Pick a plan to turn it back on.
+            </span>
+            <Link
+              href="/pricing"
+              className="text-xs sm:text-sm font-semibold text-amber-300 hover:text-amber-200 underline flex-shrink-0"
+            >
+              Choose a plan →
+            </Link>
+          </div>
+        )}
 
         {/* ── Main content ── */}
         <main className="flex-1 overflow-y-auto min-w-0">

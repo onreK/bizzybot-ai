@@ -1,5 +1,6 @@
 import { query } from '@/lib/database.js';
 import { isValidTwilioRequest } from '@/lib/twilio-verify.js';
+import { canUseVoiceAI } from '@/lib/trial-access.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ export async function POST(request) {
     const to = params.To || '';
 
     const res = await query(
-      `SELECT forward_cell, call_mode, ring_seconds, vapi_voice_url
+      `SELECT forward_cell, call_mode, ring_seconds, vapi_voice_url, clerk_user_id
        FROM customer_phone_numbers WHERE phone_number = $1 LIMIT 1`,
       [to]
     ).catch(() => ({ rows: [] }));
@@ -52,6 +53,33 @@ export async function POST(request) {
     const cell = toE164(cfg.forward_cell);
     const mode = cfg.call_mode || 'human_first';
     const ring = Math.min(45, Math.max(5, parseInt(cfg.ring_seconds, 10) || 18));
+    const action = `${BASE_URL}/api/voice/fallback`;
+
+    // Trial ended, or this month's voice minutes are used up — the AI can't take
+    // this call. Silently forward to the owner's cell if they have one configured;
+    // no announcement either way (matches the AI's own silence in other channels).
+    let aiAvailable = true;
+    if (cfg.clerk_user_id) {
+      const customerRow = await query(
+        `SELECT id, plan, stripe_subscription_id, created_at FROM customers WHERE clerk_user_id = $1 LIMIT 1`,
+        [cfg.clerk_user_id]
+      ).catch(() => ({ rows: [] }));
+      const customer = customerRow.rows[0];
+      if (customer) {
+        const gate = await canUseVoiceAI(customer);
+        aiAvailable = gate.allowed;
+      }
+    }
+
+    if (!aiAvailable) {
+      if (cell) {
+        return twiml(
+          `<Dial timeout="${ring}" action="${esc(action)}" method="POST" answerOnBridge="true">` +
+          `<Number>${esc(cell)}</Number></Dial>`
+        );
+      }
+      return twiml(`<Hangup/>`);
+    }
 
     // AI-first, or no cell configured, or we don't know where the AI lives →
     // hand straight to the AI (Vapi's own inbound handler).
@@ -62,7 +90,6 @@ export async function POST(request) {
     }
 
     // Human-first: ring the owner's cell, then fall back to the AI on no-answer.
-    const action = `${BASE_URL}/api/voice/fallback`;
     return twiml(
       `<Dial timeout="${ring}" action="${esc(action)}" method="POST" answerOnBridge="true">` +
       `<Number>${esc(cell)}</Number></Dial>`

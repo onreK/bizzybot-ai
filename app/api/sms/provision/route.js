@@ -3,24 +3,11 @@ import { auth } from '@clerk/nextjs';
 import twilio from 'twilio';
 import { query } from '@/lib/database.js';
 import { submitTollfreeVerification } from '@/lib/tollfree-verification.js';
+import { hasActiveAccess } from '@/lib/trial-access.js';
 
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   : null;
-
-const TRIAL_DAYS = 14;
-
-// A customer may provision a number if they have a Stripe subscription
-// (paid or trialing) or are still within their 14-day signup trial.
-function hasActiveAccess(customer) {
-  if (!customer) return false;
-  if (customer.stripe_subscription_id) return true;
-  if (customer.created_at) {
-    const ageMs = Date.now() - new Date(customer.created_at).getTime();
-    if (ageMs < TRIAL_DAYS * 24 * 60 * 60 * 1000) return true;
-  }
-  return false;
-}
 
 async function ensureTable() {
   await query(`

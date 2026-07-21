@@ -272,7 +272,9 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — updated 2026-07-19 morning)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-21)
+
+**✅ TRIAL EXPIRATION + VOICE-MINUTE CAP ENFORCEMENT SHIPPED 2026-07-21** — see Session Log for full details. No grace period: trial ends → AI goes fully silent on every channel (dashboard/leads/settings stay viewable, amber banner links to `/pricing`). Paying customers who exceed their plan's voice-minute allowance are also cut off from AI voice — calls route silently to human call forwarding (or hang up if no forwarding number set), no announcement. **Not yet tested against a real trial-expired account** — next session should either fast-forward a test customer's `created_at` in the DB or wait for a real trial to lapse, then confirm: (a) SMS/email/chat go silent, (b) dashboard banner appears and links to `/pricing`, (c) a voice call to that customer's number forwards to their cell instead of the AI answering.
 
 **📧 INTENT TRIAGE SHIPPED — founder: reconnect Outlook** (Email → Setup), then send one vendor-style email + one lead-style email to verify live: vendor gets NO reply + amber "Left for you" flag; lead gets an AI reply. Success criterion: one week of real traffic, zero wrong-target auto-replies.
 
@@ -325,6 +327,16 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 ---
 
 ## Session Log
+
+### Session — 2026-07-21 (Trial expiration + voice-minute-cap enforcement — AI stops on schedule)
+
+- **Founder decision (no back-and-forth, fully specified up front):** no grace period after the 14-day trial ("that's what the 14 day trial is for"); dashboard/leads/settings stay fully viewable (soft lock, AI-only cutoff); trial end routes to a plan-picker then payment (reused the existing `/pricing` → Stripe checkout flow, no new payment UI needed); no plan recommendation based on trial usage (unrepresentative, would under-recommend). Extended mid-build: paying customers who exceed their plan's voice-minute allowance (15/100/400 min/mo) also get cut off from AI voice — voice is the most expensive channel to run. When AI is unavailable on a call (trial expired OR minutes exceeded), route silently to human call forwarding only — explicitly no spoken message to the caller.
+- **New `lib/trial-access.js`** — single shared module, TDD'd (`tests/trial-access.test.mjs`, 5 tests): `hasActiveAccess(customer)` (true if real Stripe subscription OR still within 14 days of `created_at`) and `canUseVoiceAI(customer)` (adds the per-plan voice-minute check on top, via `vapi_call_logs` summed for the current calendar month). `app/api/sms/provision/route.js`'s pre-existing duplicate trial-gate logic now imports from here instead (dedup only, no behavior change).
+- **Text/email/chat channels** — `lib/ai-service.js` gains a "Step 1.3" gate right after customer resolution: if `hasActiveAccess()` is false, `generateAIResponse()` returns `success: false` (deliberately, not the softer `success: true` placeholder the existing usage-pool cap uses) — every channel webhook already skips sending on `!success`, so trial-expired customers go silent on every channel with zero changes to the individual webhook files.
+- **Voice channel** — both `app/api/voice/incoming/route.js` and `app/api/voice/fallback/route.js` now call `canUseVoiceAI()` before handing a live caller to Vapi. If blocked: forwards to the owner's cell if one is configured (same `<Dial>` used by normal human-first routing), otherwise hangs up — no `<Say>` in either path. In `fallback`, the gate sits after the existing missed-call email/SMS alerts to the owner, so the owner is still notified even when the AI itself can't pick up.
+- **Dashboard banner** — new lightweight `GET /api/customer/access-status` (fails open to `hasAccess: true` on any error, so a DB hiccup never locks a real customer out) polled every 5 minutes from `app/(dashboard)/layout.js`. When `hasAccess` is false, an amber banner sits above the main content on every dashboard page except `/pricing` itself: "Your free trial has ended — your AI has stopped responding. Pick a plan to turn it back on." → links to `/pricing`.
+- Verified: 29/29 tests passing (5 new), `npx next build` clean (pre-existing unrelated import warnings only, same as before this change).
+- **Not yet live-tested against a real expired-trial account** — see NEXT SESSION TODO.
 
 ### Session — 2026-07-20 (Clerk migrated Development→Production — fixed the real cause of 7 weeks of zero Google indexing)
 
