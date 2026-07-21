@@ -274,7 +274,13 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ## ☀️ NEXT SESSION TODO (start here — updated 2026-07-21)
 
-**✅ TRIAL EXPIRATION + VOICE-MINUTE CAP ENFORCEMENT SHIPPED 2026-07-21** — see Session Log for full details. No grace period: trial ends → AI goes fully silent on every channel (dashboard/leads/settings stay viewable, amber banner links to `/pricing`). Paying customers who exceed their plan's voice-minute allowance are also cut off from AI voice — calls route silently to human call forwarding (or hang up if no forwarding number set), no announcement. **Not yet tested against a real trial-expired account** — next session should either fast-forward a test customer's `created_at` in the DB or wait for a real trial to lapse, then confirm: (a) SMS/email/chat go silent, (b) dashboard banner appears and links to `/pricing`, (c) a voice call to that customer's number forwards to their cell instead of the AI answering.
+**📌 PINNED — LIVE-TEST TRIAL EXPIRATION + VOICE-CAP ENFORCEMENT (not yet verified against a real expired account).** Shipped + double-checked 2026-07-21 (2 commits: c88109b initial, 6ecfb5c silence-gap fix — see Session Log). No grace period: trial ends → AI goes fully silent on EVERY channel (dashboard/leads/settings stay viewable, amber banner links to `/pricing`); paying customers over their voice-minute allowance are cut off from AI voice (silent human-forward, or hang up if no forwarding number). ⚠️ The first build had a real gap — most channels sent a canned "technical difficulties / we'll get back to you" fallback instead of going quiet — now fixed on SMS/web chat/FB DM/IG DM/email triage. **To verify:** fast-forward a test customer's `customers.created_at` to 15+ days ago in the DB (or wait for a real trial to lapse), then confirm ALL of:
+- (a) text that customer's SMS number → NO reply (not the "technical difficulties" line);
+- (b) message the web-chat widget → NO bot reply / widget removes itself;
+- (c) send the customer an email (Outlook/Gmail) → NO auto-reply, not even the "left for you" template;
+- (d) log into that customer's dashboard → amber "trial ended" banner shows + links to `/pricing`;
+- (e) call the customer's toll-free → forwards to their cell instead of the AI answering (or hangs up if no cell set);
+- (f) voice-minute cap: harder to force — either temporarily lower a test account's plan cap or watch a real customer near their limit; confirm calls forward silently once over.
 
 **📧 INTENT TRIAGE SHIPPED — founder: reconnect Outlook** (Email → Setup), then send one vendor-style email + one lead-style email to verify live: vendor gets NO reply + amber "Left for you" flag; lead gets an AI reply. Success criterion: one week of real traffic, zero wrong-target auto-replies.
 
