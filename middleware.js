@@ -25,6 +25,13 @@ export default authMiddleware({
     "/pricing",
     "/privacy",
     "/terms",
+    // SEO landing pages — MUST be public so search engines and AI crawlers
+    // aren't redirected to sign-in
+    "/ai-receptionist-for-contractors",
+    "/ai-receptionist-for-salons",
+    "/ai-receptionist-for-real-estate",
+    "/podium-alternative",
+    "/blog(.*)",
     "/sms-optin-example",
     "/sms-optin/(.*)",               // per-customer branded opt-in evidence (Twilio reviewers, no login)
     "/sms-terms/(.*)",               // per-customer branded SMS terms (Twilio reviewers, no login)
