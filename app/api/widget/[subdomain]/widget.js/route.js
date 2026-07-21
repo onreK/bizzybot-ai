@@ -311,6 +311,11 @@ export async function GET(request, { params }) {
 
       if (response.ok) {
         const data = await response.json();
+        // Silenced (owner's trial ended) or empty reply → render nothing
+        // (the finally block resets typing state and re-renders)
+        if (data.silenced || !data.response) {
+          return;
+        }
         messages.push({
           from: 'bot',
           text: data.response,

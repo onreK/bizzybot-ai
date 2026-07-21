@@ -3,20 +3,7 @@
 // as handed out by the Web Chat page's embed snippet).
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/database.js';
-
-const TRIAL_DAYS = 14;
-
-// Same access rule as SMS provisioning: Stripe subscription present, or
-// still within the 14-day signup trial.
-function hasActiveAccess(customer) {
-  if (!customer) return false;
-  if (customer.stripe_subscription_id) return true;
-  if (customer.created_at) {
-    const ageMs = Date.now() - new Date(customer.created_at).getTime();
-    if (ageMs < TRIAL_DAYS * 24 * 60 * 60 * 1000) return true;
-  }
-  return false;
-}
+import { hasActiveAccess } from '@/lib/trial-access.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

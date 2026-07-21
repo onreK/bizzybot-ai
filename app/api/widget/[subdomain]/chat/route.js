@@ -74,6 +74,13 @@ export async function POST(request, { params }) {
       conversationHistory
     );
 
+    // Trial ended, no subscription → AI is off. Return a silenced flag with no
+    // reply text; the widget client renders nothing (never the "having trouble"
+    // fallback below, which would falsely imply a reply is coming).
+    if (aiResult.trialExpired) {
+      return NextResponse.json({ silenced: true }, { headers: CORS_HEADERS });
+    }
+
     const responseText = aiResult.success
       ? aiResult.response
       : "I'm sorry, I'm having trouble right now. Please try again in a moment.";

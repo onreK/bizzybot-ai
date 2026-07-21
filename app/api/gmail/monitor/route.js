@@ -8,6 +8,7 @@ import { generateGmailResponse } from '@/lib/ai-service.js';
 import { createOrUpdateContact, trackLeadEventWithContact, updateLeadScoring } from '@/lib/leads-service.js';
 import { runTriage } from '@/lib/intent-triage-store.js';
 import { conservativeReply } from '@/lib/intent-triage.js';
+import { isAiSilencedForClerkUser } from '@/lib/trial-access.js';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -768,9 +769,16 @@ async function checkForNewEmails(gmail, connection, dbConnectionId) {
 // 🎯 UPDATED: RESPOND TO EMAIL WITH CUSTOM RESPONSE SUPPORT
 async function respondToEmail(gmail, connection, dbConnectionId, emailId, customMessage, actualSend, customResponse) {
   if (!emailId) {
-    return NextResponse.json({ 
-      error: 'Email ID is required for response' 
+    return NextResponse.json({
+      error: 'Email ID is required for response'
     }, { status: 400 });
+  }
+
+  // Trial ended, no subscription → AI is off. Don't send anything (including the
+  // conservative "left for you" template, which bypasses the AI service gate).
+  if (await isAiSilencedForClerkUser(connection.user_id)) {
+    console.log('🚫 [GMAIL] Trial ended — skipping email response, AI is silent');
+    return NextResponse.json({ skipped: true, reason: 'trial_expired' });
   }
 
   console.log('🤖 Processing email for response...');

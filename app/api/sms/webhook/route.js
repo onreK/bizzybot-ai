@@ -187,6 +187,17 @@ export async function POST(request) {
       knowledgeBaseUsed: aiResult.metadata?.knowledgeBaseUsed
     });
 
+    // Trial ended, no subscription → the AI is off. Acknowledge Twilio with an
+    // empty TwiML (no <Message>) so the lead gets NOTHING — never the generic
+    // "technical difficulties" fallback below, which would be misleading.
+    if (aiResult.trialExpired) {
+      console.log('🚫 [SMS-WEBHOOK] Trial ended — staying silent, no reply sent');
+      return new Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/xml' },
+      });
+    }
+
     // Get AI response (fallback if service fails)
     let aiResponse;
     if (aiResult.success) {

@@ -151,6 +151,13 @@ async function handleDM(event, connection) {
     connection?.user_id || null
   );
 
+  // Trial ended, no subscription → AI is off. Send nothing (never the
+  // fallback line below, which would falsely promise a reply).
+  if (aiResult?.trialExpired) {
+    console.log('🚫 Facebook DM skipped — trial ended, AI is silent');
+    return;
+  }
+
   const reply = aiResult?.success
     ? aiResult.response
     : "Thanks for your message! We'll get back to you shortly.";

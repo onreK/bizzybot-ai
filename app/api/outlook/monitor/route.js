@@ -7,6 +7,7 @@ import { createOrUpdateContact, trackLeadEvent } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import { runTriage } from '@/lib/intent-triage-store.js';
 import { conservativeReply } from '@/lib/intent-triage.js';
+import { isAiSilencedForClerkUser } from '@/lib/trial-access.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -145,6 +146,15 @@ async function processAccount(conn) {
   const customer = customerResult.rows[0];
   if (!customer) return diag;
   diag.customerFound = true;
+
+  // Trial ended, no subscription → AI is off for this account. Skip ALL email
+  // handling (triage, AI replies, and the conservative "left for you" template)
+  // so nothing is auto-sent to their leads. Gated here, before triage runs, so
+  // we also skip the OpenAI classification cost.
+  if (await isAiSilencedForClerkUser(customer.clerk_user_id)) {
+    diag.skippedTrialExpired = true;
+    return diag;
+  }
 
   for (const msg of messages) {
     try {
