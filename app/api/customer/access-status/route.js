@@ -13,7 +13,7 @@ export async function GET() {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const result = await query(
-      `SELECT stripe_subscription_id, created_at FROM customers WHERE clerk_user_id = $1 LIMIT 1`,
+      `SELECT id, stripe_subscription_id, created_at FROM customers WHERE clerk_user_id = $1 LIMIT 1`,
       [userId]
     ).catch(() => ({ rows: [] }));
 

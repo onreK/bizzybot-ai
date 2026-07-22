@@ -29,3 +29,15 @@ test('no customer record at all has no access', () => {
   assert.equal(hasActiveAccess(null), false);
   assert.equal(hasActiveAccess(undefined), false);
 });
+
+test('the comp/demo account (863) always has access, even with no sub and an old signup', () => {
+  const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString();
+  // id can arrive as a number or a string from the DB driver — both must match.
+  assert.equal(hasActiveAccess({ id: 863, stripe_subscription_id: null, created_at: twentyDaysAgo }), true);
+  assert.equal(hasActiveAccess({ id: '863', stripe_subscription_id: null, created_at: twentyDaysAgo }), true);
+});
+
+test('a non-comp expired account is still cut off (comp check does not leak)', () => {
+  const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(hasActiveAccess({ id: 999, stripe_subscription_id: null, created_at: twentyDaysAgo }), false);
+});
