@@ -55,7 +55,10 @@ export default function RootLayout({ children }) {
     >
       <html lang="en">
         <head>
-          <link rel="icon" href="/favicon.ico" />
+          {/* Favicon is served from app/icon.png (Next.js convention) — it
+              auto-injects the correct <link rel="icon">. The old manual link
+              pointed to /favicon.ico, which didn't exist (404 → Google showed
+              a generic globe). */}
           <meta name="viewport" content="width=device-width, initial-scale=1" />
         </head>
         <body className={`${inter.className} antialiased`}>
