@@ -60,6 +60,29 @@ export default function RootLayout({ children }) {
               pointed to /favicon.ico, which didn't exist (404 → Google showed
               a generic globe). */}
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          {/* Organization schema — entity disambiguation. Several unrelated
+              companies share the "BizzyBot" name, so Google/AI were blending us
+              with them. This declares us as one distinct entity (legal name +
+              logo + our real category + description).
+              TODO: add a `sameAs: [...]` array once we have official brand
+              profiles we actually own (LinkedIn company page, G2, Capterra,
+              etc.) — sameAs is the strongest disambiguation signal, but every
+              URL must be a profile we truly control. */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'BizzyBot',
+                legalName: 'Bizzy Bot Ai LLC',
+                url: 'https://bizzybotai.com',
+                logo: 'https://bizzybotai.com/icon.png',
+                description:
+                  'BizzyBot is an AI receptionist for small businesses that answers phone calls, texts, emails, web chat, and social media DMs 24/7 — capturing, scoring, and booking every lead automatically. From $29/month.',
+              }).replace(/</g, '\\u003c'),
+            }}
+          />
         </head>
         <body className={`${inter.className} antialiased`}>
           <AttributionTracker />
