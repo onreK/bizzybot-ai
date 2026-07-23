@@ -88,6 +88,21 @@ mark and requires no registration. (The **®** symbol may only be used AFTER reg
 
 ---
 
+## 11. DIY filing — YES, you can self-file (decided 2026-07-23)
+US-domiciled applicants (your VA LLC qualifies) may file **pro se** — no attorney required
+(only foreign-domiciled applicants must use a US attorney). File at **uspto.gov → Trademark
+Center**. ~$350 gov fee/class.
+- **The 3 DIY risk points:** (1) skipping the clearance search, (2) writing a custom
+  goods description (draws a surcharge + refusal risk — instead pick a **pre-approved USPTO
+  ID Manual** entry), (3) a weak specimen. Plus you handle any Office Action yourself.
+- **NEXT STEP before filing:** run a FREE preliminary clearance search yourself on USPTO's
+  search tool + Google (the dead app 98377405 is gone; check for other live "BizzyBot"-ish
+  marks and note common-law user bizzybotnj.com). Ask Claude to help interpret results.
+- Verdict: DIY is reasonable here since the mark is in-use and the packet is ready; the
+  clearance search is the one part worth extra care.
+
+---
+
 ### Quick-reference summary (paste into any form)
 - **Mark:** BIZZYBOT (standard characters)
 - **Owner:** Bizzy Bot Ai LLC, [state], [address]
