@@ -63,11 +63,9 @@ export default function RootLayout({ children }) {
           {/* Organization schema — entity disambiguation. Several unrelated
               companies share the "BizzyBot" name, so Google/AI were blending us
               with them. This declares us as one distinct entity (legal name +
-              logo + our real category + description).
-              TODO: add a `sameAs: [...]` array once we have official brand
-              profiles we actually own (LinkedIn company page, G2, Capterra,
-              etc.) — sameAs is the strongest disambiguation signal, but every
-              URL must be a profile we truly control. */}
+              logo + our real category + description + sameAs profile links).
+              sameAs is the strongest disambiguation signal — only add profiles
+              we actually own. Add G2/Capterra/Trustpilot here once published. */}
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
@@ -80,6 +78,9 @@ export default function RootLayout({ children }) {
                 logo: 'https://bizzybotai.com/icon.png',
                 description:
                   'BizzyBot is an AI receptionist for small businesses that answers phone calls, texts, emails, web chat, and social media DMs 24/7 — capturing, scoring, and booking every lead automatically. From $29/month.',
+                sameAs: [
+                  'https://www.linkedin.com/company/bizzybot',
+                ],
               }).replace(/</g, '\\u003c'),
             }}
           />
