@@ -244,5 +244,14 @@ test('the voice instruction never guesses, asks for a name, and does NOT collect
   // letter-by-letter readback, a phantom-dot fix and a give-up rule. The
   // caller's number is already known from caller ID, so we text instead.
   assert.match(instruction, /do not ask for an email address/i);
-  assert.equal(/ask (?:the caller |them )?for (?:their )?email/i.test(instruction), false);
+  // Strip the explicit prohibitions before scanning, so the legitimate
+  // "do not ask for an email address" line doesn't trip this guard, then
+  // catch ANY affirmative instruction to obtain an email. A regex that only
+  // matches one phrasing is worse than none — it looks like protection.
+  const withoutProhibitions = instruction.replace(/\b(?:do not|don't|never)\b[^.]*\./gi, '');
+  assert.equal(
+    /(?:ask|get|collect|capture|request)[^.]{0,40}email/i.test(withoutProhibitions),
+    false,
+    'the voice instruction must never ask the caller for an email address'
+  );
 });
