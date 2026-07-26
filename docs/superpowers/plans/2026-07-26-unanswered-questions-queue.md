@@ -1682,6 +1682,7 @@ Automated tests cover the logic; these prove the loop closes in the real world.
 - [ ] Ask again → a real answer comes back
 
 **Voice:**
+- [ ] **FIRST — re-sync the Vapi assistant.** The new mid-call instruction does NOT reach an already-provisioned assistant on deploy. Vapi holds its own copy of the prompt, pushed only by provisioning, by `/api/admin/sync-vapi`, or as a side effect of answering a queued question. Hit **AI Settings → Voice → Save & Sync** on the test account before calling, or the AI will behave exactly as it did before and the feature will look broken when it is simply unsynced.
 - [ ] Call from a phone that is **NOT** the forwarding cell. Calling from the forwarded number reaches carrier voicemail and its PIN prompt — a recurring false alarm in this project (see CLAUDE.md).
 - [ ] Ask something uncovered; the AI declines to guess and asks for a name
 - [ ] Hang up → the question appears in the queue with the name and caller number
