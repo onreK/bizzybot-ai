@@ -108,3 +108,42 @@ test('extractKnowledgeGap keeps the whole question when it contains brackets', (
     question: 'Do you offer a [Bronze] tier discount?',
   });
 });
+
+import { groupGapRows } from '../lib/knowledge-gaps-store.js';
+
+test('groupGapRows groups rows by topic with counts, newest topic group first', () => {
+  const rows = [
+    { id: 1, topic: 'service_area', question: 'Do you cover Chesterfield?', channel: 'sms',
+      contact_name: 'Mike', contact_email: null, contact_phone: '+18045551212',
+      created_at: '2026-07-24T10:00:00Z', followup_at: null, followup_method: null },
+    { id: 2, topic: 'service_area', question: 'Are you out in Midlothian?', channel: 'chat',
+      contact_name: null, contact_email: null, contact_phone: null,
+      created_at: '2026-07-25T10:00:00Z', followup_at: null, followup_method: null },
+    { id: 3, topic: 'warranty', question: 'How long is the labor warranty?', channel: 'sms',
+      contact_name: 'Mike', contact_email: null, contact_phone: '+18045551212',
+      created_at: '2026-07-26T10:00:00Z', followup_at: null, followup_method: null },
+  ];
+  const grouped = groupGapRows(rows);
+
+  assert.equal(grouped.length, 2);
+  assert.equal(grouped[0].topic, 'warranty');        // most recent activity first
+  assert.equal(grouped[0].count, 1);
+  assert.equal(grouped[1].topic, 'service_area');
+  assert.equal(grouped[1].count, 2);
+  assert.equal(grouped[1].label, 'Service area');
+  assert.equal(grouped[1].questions[0].question, 'Are you out in Midlothian?'); // newest first
+});
+
+test('groupGapRows returns an empty array for no rows', () => {
+  assert.deepEqual(groupGapRows([]), []);
+});
+
+test('groupGapRows carries follow-up state through so the UI can show handled leads', () => {
+  const rows = [
+    { id: 9, topic: 'pricing', question: 'Cost?', channel: 'sms',
+      contact_name: 'Dana', contact_email: null, contact_phone: '+18045551213',
+      created_at: '2026-07-26T10:00:00Z', followup_at: '2026-07-26T12:00:00Z', followup_method: 'manual' },
+  ];
+  const grouped = groupGapRows(rows);
+  assert.equal(grouped[0].questions[0].followupMethod, 'manual');
+});
