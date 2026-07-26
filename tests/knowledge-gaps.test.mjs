@@ -212,6 +212,18 @@ test('parseTranscriptScan drops entries with an empty question', () => {
   assert.equal(result.gaps[0].question, 'Open Sunday?');
 });
 
+test('parseTranscriptScan drops entries whose question is not a string', () => {
+  const raw = JSON.stringify({ gaps: [
+    { topic: 'pricing', question: {} },
+    { topic: 'hours', question: ['a', 'b'] },
+    { topic: 'hours', question: 42 },
+    { topic: 'hours', question: 'Open Sunday?' },
+  ] });
+  const result = parseTranscriptScan(raw);
+  assert.equal(result.gaps.length, 1);
+  assert.equal(result.gaps[0].question, 'Open Sunday?');
+});
+
 test('parseTranscriptScan handles null and empty input', () => {
   assert.deepEqual(parseTranscriptScan(null).gaps, []);
   assert.deepEqual(parseTranscriptScan('').gaps, []);
@@ -223,8 +235,14 @@ test('buildTranscriptScanPrompt names the business and lists every valid topic',
   for (const topic of GAP_TOPICS) assert.equal(prompt.includes(topic), true);
 });
 
-test('the voice instruction tells the AI not to guess and to ask for a name', () => {
+test('the voice instruction never guesses, asks for a name, and does NOT collect an email', () => {
   const instruction = buildVoiceGapInstruction();
-  assert.equal(/never guess|do not guess/i.test(instruction), true);
-  assert.equal(/name/i.test(instruction), true);
+  assert.match(instruction, /never guess|do not guess/i);
+  assert.match(instruction, /name/i);
+  assert.match(instruction, /confirm the number/i);
+  // Deliberate and load-bearing: capturing an email by phone previously needed
+  // letter-by-letter readback, a phantom-dot fix and a give-up rule. The
+  // caller's number is already known from caller ID, so we text instead.
+  assert.match(instruction, /do not ask for an email address/i);
+  assert.equal(/ask (?:the caller |them )?for (?:their )?email/i.test(instruction), false);
 });
