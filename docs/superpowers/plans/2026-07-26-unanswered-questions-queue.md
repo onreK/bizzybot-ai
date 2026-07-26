@@ -1097,6 +1097,7 @@ function relativeDay(iso) {
 export default function KnowledgeGapsCard() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [openTopic, setOpenTopic] = useState(null);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1110,8 +1111,16 @@ export default function KnowledgeGapsCard() {
       if (res.ok) {
         const data = await res.json();
         setGroups(data.groups || []);
+        setLoadFailed(false);
+      } else {
+        setLoadFailed(true);
       }
-    } catch { /* card simply stays empty */ }
+    } catch {
+      // Render nothing rather than a green all-clear: claiming "your AI
+      // answered everything" when we simply could not load is worse than
+      // showing no card at all.
+      setLoadFailed(true);
+    }
     setLoading(false);
   }
 
@@ -1172,7 +1181,7 @@ export default function KnowledgeGapsCard() {
     setBusyLead(null);
   }
 
-  if (loading) return null;
+  if (loading || loadFailed) return null;
 
   // Post-answer: who is still waiting on this answer
   if (waiting && waiting.leads.length > 0) {
