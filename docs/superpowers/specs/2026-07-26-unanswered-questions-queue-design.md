@@ -186,6 +186,7 @@ This is **fire-and-forget**: a Vapi outage or a customer with no assistant provi
 - **The voice AI asks one extra question when stumped.** Slightly longer calls in exactly the moments the AI is already underperforming. Judged worth it for a named, reachable lead; watch it in the first week of real calls.
 - **Marker echo.** A lead who types `[UNKNOWN:pricing|x]` at the AI could get it echoed back and produce a junk row. Harm is limited to queue noise — the marker is only ever read from model output and can only create a row. Dismiss handles it.
 - **Knowledge base grows one way.** No pruning, no size cap in v1.
+- **Marker stripping handles one level of bracket nesting, not two.** A question containing `[Gold [Plus]]` would leak a fragment. Single nesting (`[Bronze]`) and sibling brackets (`[Gold] or [Platinum]`) are handled correctly; double nesting in a short paraphrased question is an implausible shape from a language model and was judged not worth further regex engineering.
 
 ## Success criteria
 
