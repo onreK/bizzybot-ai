@@ -87,8 +87,24 @@ test('nothing resembling a marker survives stripping, whatever the shape', () =>
   const nasties = [
     '[UNKNOWN:pricing|q]', '[UNKNOWN:pricing|q', '[UNKNOWN', '[UNKNOWN]',
     '[UNKNOWN:|]', 'text [UNKNOWN:a|b] more [UNKNOWN:c|d]',
+    '[UNKNOWN:pricing|a [Bronze] tier?]', '[UNKNOWN:a|b [c] d',
   ];
   for (const n of nasties) {
     assert.equal(stripGapMarkers(`Hello ${n}`).includes('UNKNOWN'), false, `leaked: ${n}`);
   }
+});
+
+test('stripGapMarkers removes a marker whose question text contains brackets', () => {
+  const text = 'Let me check on that. [UNKNOWN:pricing|Do you offer a [Bronze] tier discount?] I will follow up.';
+  const result = stripGapMarkers(text);
+  assert.equal(result, 'Let me check on that. I will follow up.');
+  assert.equal(result.includes(']'), false);
+});
+
+test('extractKnowledgeGap keeps the whole question when it contains brackets', () => {
+  const text = '[UNKNOWN:pricing|Do you offer a [Bronze] tier discount?]';
+  assert.deepEqual(extractKnowledgeGap(text), {
+    topic: 'pricing',
+    question: 'Do you offer a [Bronze] tier discount?',
+  });
 });
