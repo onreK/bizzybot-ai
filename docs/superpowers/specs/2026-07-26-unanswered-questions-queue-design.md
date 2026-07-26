@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS knowledge_gaps (
 
 **Grouping happens at read time** — `GROUP BY topic` over open rows for one customer. No cluster table, no maintenance, no state to drift. At tens of thousands of rows per customer this would need revisiting; at current scale it is instant.
 
-**Recording is non-blocking.** The write happens after the reply is dispatched and is wrapped so a database failure logs a warning and nothing more. The lead still gets their message.
+**Recording cannot break a reply.** The write happens once the reply text is final, and the recording function catches every error internally — it cannot throw. A database failure logs a warning and nothing more; the lead still gets their message, unchanged.
 
 **Same-conversation dedup.** If one contact hits the same topic twice inside a conversation, only the first is recorded — prevents a confused back-and-forth from producing five identical rows. On voice the same guard applies per call: one row per topic per call, however many times it came up.
 
