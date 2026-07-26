@@ -3,6 +3,7 @@ import { query } from '@/lib/database.js';
 import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/leads-service.js';
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import { processVoiceDocumentFollowup } from '@/lib/voice-document-followup.js';
+import { processVoiceGapScan } from '@/lib/voice-gap-scan.js';
 import crypto from 'crypto';
 
 export async function POST(request) {
@@ -119,6 +120,15 @@ export async function POST(request) {
         await processVoiceDocumentFollowup({
           customerId: owner.customer_id,
           clerkUserId: owner.clerk_user_id,
+          vapiCallId: call.id,
+          callerPhone,
+          transcript,
+          existingContact: contactResult?.contact || null,
+        }).catch(() => {});
+
+        // 6. Knowledge gaps: questions the AI could not answer on this call
+        await processVoiceGapScan({
+          customerId: owner.customer_id,
           vapiCallId: call.id,
           callerPhone,
           transcript,
