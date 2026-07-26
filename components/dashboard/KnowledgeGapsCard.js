@@ -105,9 +105,13 @@ export default function KnowledgeGapsCard() {
     setBusyLead(null);
   }
 
-  if (loading || loadFailed) return null;
+  if (loading) return null;
 
-  // Post-answer: who is still waiting on this answer
+  // The follow-up panel renders BEFORE the loadFailed gate. It is driven by
+  // `waiting`, which came from a save that already succeeded — a failed
+  // background refresh must never hide it. These leads exist nowhere else:
+  // a fresh mount only fetches open gaps, so hiding this panel loses the
+  // "who is still waiting" list for good.
   if (waiting && waiting.leads.length > 0) {
     return (
       <div className="bg-[#161B22] border border-violet-500/20 rounded-xl overflow-hidden">
@@ -159,6 +163,9 @@ export default function KnowledgeGapsCard() {
       </div>
     );
   }
+
+  // Only the queue list below depends on a successful load.
+  if (loadFailed) return null;
 
   if (groups.length === 0) {
     return (
