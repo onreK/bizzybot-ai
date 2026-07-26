@@ -17,6 +17,6 @@ export async function GET() {
     return NextResponse.json({ groups });
   } catch (error) {
     console.error('❌ [GAPS API] list failed:', error.message);
-    return NextResponse.json({ groups: [] });
+    return NextResponse.json({ error: 'Could not load your queue' }, { status: 500 });
   }
 }

@@ -106,8 +106,20 @@ export async function POST(request) {
         await releaseFollowup({ customerId: customer.id, gapId });
         return NextResponse.json({ error: 'No email address on file for this lead' }, { status: 400 });
       }
+
+      // Replies should reach the business, not BizzyBot's own inbox — same
+      // approach as lib/voice-document-followup.js. Fall back gracefully
+      // (omit reply_to) if the customer has no business email on file rather
+      // than sending a broken reply-to address.
+      const bizEmailResult = await query(
+        `SELECT business_email FROM sms_verification_info WHERE clerk_user_id = $1 LIMIT 1`,
+        [customer.clerk_user_id]
+      ).catch(() => ({ rows: [] }));
+      const replyTo = (bizEmailResult.rows[0]?.business_email || '').trim();
+
       const result = await sendEmail({
-        from: `${businessName} <alerts@bizzybotai.com>`,
+        from: `${businessName} via BizzyBot <alerts@bizzybotai.com>`,
+        ...(replyTo ? { reply_to: replyTo } : {}),
         to: gap.contact_email,
         subject: `Following up on your question`,
         text: `Hi${gap.contact_name ? ` ${gap.contact_name}` : ''},\n\nYou asked: ${gap.question}\n\n${answerBody}\n\n— ${businessName}`,

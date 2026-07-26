@@ -94,6 +94,16 @@ test('nothing resembling a marker survives stripping, whatever the shape', () =>
   }
 });
 
+test('stripGapMarkers leaves an ordinary reply byte-identical when no marker is present', () => {
+  const text = 'Hello.  Two spaces stay.\n\n\nAnd so do blank lines. ';
+  assert.equal(stripGapMarkers(text), text);
+});
+
+test('stripGapMarkers does not eat a reply containing ordinary unclosed bracket prose', () => {
+  const text = 'the exact cost is [unknown right now';
+  assert.equal(stripGapMarkers(text), text);
+});
+
 test('stripGapMarkers removes a marker whose question text contains brackets', () => {
   const text = 'Let me check on that. [UNKNOWN:pricing|Do you offer a [Bronze] tier discount?] I will follow up.';
   const result = stripGapMarkers(text);
