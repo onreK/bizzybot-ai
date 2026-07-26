@@ -4,6 +4,7 @@ import twilio from 'twilio';
 import { query, getCustomerByClerkId } from '@/lib/database.js';
 import { getGapById, recordFollowup } from '@/lib/knowledge-gaps-store.js';
 import { sendEmail } from '@/lib/resend-send.js';
+import { hasActiveAccess } from '@/lib/trial-access.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +28,26 @@ export async function POST(request) {
     const gap = await getGapById({ customerId: customer.id, gapId });
     if (!gap) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    // Already followed up — a double-click or retried request must not send a
+    // second message to a real person. Reported as success so the UI settles
+    // into the same state either way.
+    if (gap.followup_at) {
+      return NextResponse.json({ success: true, sent: false, alreadySent: true });
+    }
+
     const businessName = customer.business_name || 'us';
     const body = String(answer || gap.answer || '').trim();
+
+    // Sending costs real money, so it follows the same trial gate as every
+    // other outbound path in the product. 'manual' is deliberately exempt —
+    // it records that the owner handled it themselves and sends nothing, so
+    // an expired-trial owner can still clear their queue.
+    if (method !== 'manual' && !hasActiveAccess(customer)) {
+      return NextResponse.json(
+        { error: 'Your trial has ended — pick a plan to send follow-ups.' },
+        { status: 402 }
+      );
+    }
 
     // 'manual' records that the owner handled it themselves — nothing is sent.
     if (method === 'manual') {
@@ -43,7 +62,9 @@ export async function POST(request) {
         return NextResponse.json({ error: 'No phone number on file for this lead' }, { status: 400 });
       }
       const numberResult = await query(
-        `SELECT phone_number FROM customer_phone_numbers WHERE customer_id = $1 LIMIT 1`,
+        `SELECT phone_number FROM customer_phone_numbers
+         WHERE customer_id = $1 AND phone_number IS NOT NULL
+         ORDER BY id DESC LIMIT 1`,
         [customer.id]
       ).catch(() => ({ rows: [] }));
       const fromNumber = numberResult.rows[0]?.phone_number;
