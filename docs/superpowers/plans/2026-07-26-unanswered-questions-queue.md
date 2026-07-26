@@ -284,7 +284,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   - `recordGap({ customerId, topic, question, channel, contactId, contactEmail, contactPhone, contactName, vapiCallId }) => Promise<void>` — never throws
   - `getOpenGapsGrouped(customerId) => Promise<Array<{ topic, label, count, questions: Array<{id, question, channel, contactName, contactEmail, contactPhone, createdAt, followupAt, followupMethod}> }>>`
   - `groupGapRows(rows) => Array<...>` — pure grouping helper, exported for tests
-  - `hasScannedCall(vapiCallId: string) => Promise<boolean>` — used by Task 8 to make the Vapi webhook idempotent
+  - `hasScannedCall({ customerId, vapiCallId }) => Promise<boolean>` — used by Task 8 to make the Vapi webhook idempotent
 
 - [ ] **Step 1: Write the failing test for the pure grouping helper**
 
@@ -1571,7 +1571,7 @@ export async function processVoiceGapScan({ customerId, vapiCallId, callerPhone,
 
     // Vapi can re-deliver an end-of-call webhook. Never scan a call twice —
     // it would duplicate rows and re-spend on the model.
-    if (await hasScannedCall(vapiCallId)) {
+    if (await hasScannedCall({ customerId, vapiCallId })) {
       console.log(`🧠 [GAPS] call ${vapiCallId} already scanned — skipping`);
       return;
     }
