@@ -147,3 +147,21 @@ test('groupGapRows carries follow-up state through so the UI can show handled le
   const grouped = groupGapRows(rows);
   assert.equal(grouped[0].questions[0].followupMethod, 'manual');
 });
+
+import { buildKnowledgeEntry } from '../lib/knowledge-gaps-store.js';
+
+test('buildKnowledgeEntry formats a Q&A pair for the knowledge base', () => {
+  const entry = buildKnowledgeEntry('Do you service Chesterfield?', 'Yes — Chesterfield, Richmond and Henrico.');
+  assert.equal(entry, 'Q: Do you service Chesterfield?\nA: Yes — Chesterfield, Richmond and Henrico.');
+});
+
+test('buildKnowledgeEntry trims surrounding whitespace from both parts', () => {
+  const entry = buildKnowledgeEntry('  Cost?  ', '  About $200.  ');
+  assert.equal(entry, 'Q: Cost?\nA: About $200.');
+});
+
+test('buildKnowledgeEntry adds a question mark only when the question lacks end punctuation', () => {
+  assert.equal(buildKnowledgeEntry('Do you cover Powhatan', 'Yes'), 'Q: Do you cover Powhatan?\nA: Yes');
+  assert.equal(buildKnowledgeEntry('Do you cover Powhatan?', 'Yes'), 'Q: Do you cover Powhatan?\nA: Yes');
+  assert.equal(buildKnowledgeEntry('Tell me your hours.', '9-5'), 'Q: Tell me your hours.\nA: 9-5');
+});
