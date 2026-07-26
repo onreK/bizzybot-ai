@@ -165,3 +165,66 @@ test('buildKnowledgeEntry adds a question mark only when the question lacks end 
   assert.equal(buildKnowledgeEntry('Do you cover Powhatan?', 'Yes'), 'Q: Do you cover Powhatan?\nA: Yes');
   assert.equal(buildKnowledgeEntry('Tell me your hours.', '9-5'), 'Q: Tell me your hours.\nA: 9-5');
 });
+
+import { parseTranscriptScan, buildTranscriptScanPrompt, buildVoiceGapInstruction } from '../lib/knowledge-gaps.js';
+
+test('parseTranscriptScan reads gaps and the caller name from valid JSON', () => {
+  const raw = JSON.stringify({
+    gaps: [
+      { topic: 'hours', question: 'Do you work weekends?' },
+      { topic: 'service_area', question: 'Do you come out to Powhatan?' },
+    ],
+    caller_name: 'Dana',
+  });
+  const result = parseTranscriptScan(raw);
+  assert.equal(result.gaps.length, 2);
+  assert.equal(result.gaps[0].topic, 'hours');
+  assert.equal(result.gaps[1].question, 'Do you come out to Powhatan?');
+  assert.equal(result.callerName, 'Dana');
+});
+
+test('parseTranscriptScan normalizes an unrecognized topic to other', () => {
+  const raw = JSON.stringify({ gaps: [{ topic: 'spaceships', question: 'Do you do spaceships?' }], caller_name: null });
+  assert.equal(parseTranscriptScan(raw).gaps[0].topic, 'other');
+});
+
+test('parseTranscriptScan returns no gaps for a clean call', () => {
+  const raw = JSON.stringify({ gaps: [], caller_name: 'Mike' });
+  const result = parseTranscriptScan(raw);
+  assert.deepEqual(result.gaps, []);
+  assert.equal(result.callerName, 'Mike');
+});
+
+test('parseTranscriptScan returns empty rather than throwing on malformed JSON', () => {
+  const result = parseTranscriptScan('not json at all {{{');
+  assert.deepEqual(result.gaps, []);
+  assert.equal(result.callerName, null);
+});
+
+test('parseTranscriptScan tolerates a missing gaps array', () => {
+  assert.deepEqual(parseTranscriptScan(JSON.stringify({ caller_name: 'X' })).gaps, []);
+});
+
+test('parseTranscriptScan drops entries with an empty question', () => {
+  const raw = JSON.stringify({ gaps: [{ topic: 'pricing', question: '   ' }, { topic: 'hours', question: 'Open Sunday?' }] });
+  const result = parseTranscriptScan(raw);
+  assert.equal(result.gaps.length, 1);
+  assert.equal(result.gaps[0].question, 'Open Sunday?');
+});
+
+test('parseTranscriptScan handles null and empty input', () => {
+  assert.deepEqual(parseTranscriptScan(null).gaps, []);
+  assert.deepEqual(parseTranscriptScan('').gaps, []);
+});
+
+test('buildTranscriptScanPrompt names the business and lists every valid topic', () => {
+  const prompt = buildTranscriptScanPrompt('Acme Plumbing');
+  assert.equal(prompt.includes('Acme Plumbing'), true);
+  for (const topic of GAP_TOPICS) assert.equal(prompt.includes(topic), true);
+});
+
+test('the voice instruction tells the AI not to guess and to ask for a name', () => {
+  const instruction = buildVoiceGapInstruction();
+  assert.equal(/never guess|do not guess/i.test(instruction), true);
+  assert.equal(/name/i.test(instruction), true);
+});
