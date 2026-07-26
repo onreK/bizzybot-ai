@@ -9,6 +9,7 @@ import {
   AlertCircle, ChevronRight, UserCheck, CheckCircle,
   Facebook, Instagram, Zap, ExternalLink, Flame, Bot, Clock, Mic
 } from 'lucide-react';
+import KnowledgeGapsCard from '@/components/dashboard/KnowledgeGapsCard';
 
 export default function MainDashboard() {
   const { user, isLoaded } = useUser();
@@ -490,6 +491,9 @@ export default function MainDashboard() {
           <p className="text-gray-500 text-sm">No hot leads right now — your AI is watching every channel.</p>
         </div>
       )}
+
+      {/* Unanswered questions — teach the AI what it did not know */}
+      <KnowledgeGapsCard />
 
       {/* Today — what's happening right now */}
       <div className="space-y-3">
