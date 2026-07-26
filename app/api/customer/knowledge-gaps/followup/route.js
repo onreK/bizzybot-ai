@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import twilio from 'twilio';
 import { query, getCustomerByClerkId } from '@/lib/database.js';
-import { getGapById, recordFollowup } from '@/lib/knowledge-gaps-store.js';
+import { getGapById, claimFollowup, releaseFollowup } from '@/lib/knowledge-gaps-store.js';
 import { sendEmail } from '@/lib/resend-send.js';
 import { hasActiveAccess } from '@/lib/trial-access.js';
 
@@ -13,16 +13,23 @@ const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_
   : null;
 
 export async function POST(request) {
+  let claimMade = false;
+  let customerId = null;
+  let gapId = null;
+
   try {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { gapId, method, answer } = await request.json();
+    const body = await request.json();
+    gapId = body.gapId;
+    const { method, answer } = body;
     if (!gapId || !['sms', 'email', 'manual'].includes(method)) {
       return NextResponse.json({ error: 'gapId and a valid method are required' }, { status: 400 });
     }
 
     const customer = await getCustomerByClerkId(userId);
+    customerId = customer?.id;
     if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
 
     const gap = await getGapById({ customerId: customer.id, gapId });
@@ -36,7 +43,7 @@ export async function POST(request) {
     }
 
     const businessName = customer.business_name || 'us';
-    const body = String(answer || gap.answer || '').trim();
+    const answerBody = String(answer || gap.answer || '').trim();
 
     // Sending costs real money, so it follows the same trial gate as every
     // other outbound path in the product. 'manual' is deliberately exempt —
@@ -51,14 +58,28 @@ export async function POST(request) {
 
     // 'manual' records that the owner handled it themselves — nothing is sent.
     if (method === 'manual') {
-      await recordFollowup({ customerId: customer.id, gapId, method: 'manual' });
+      const claim = await claimFollowup({ customerId: customer.id, gapId, method: 'manual' });
+      claimMade = claim.success;
+      if (!claim.success) {
+        return NextResponse.json({ success: true, sent: false, alreadySent: true });
+      }
       return NextResponse.json({ success: true, sent: false });
     }
 
-    if (!body) return NextResponse.json({ error: 'No answer to send' }, { status: 400 });
+    if (!answerBody) return NextResponse.json({ error: 'No answer to send' }, { status: 400 });
+
+    // Claim before sending. The early followup_at check above is only a fast
+    // path — two clicks in flight together both pass it, and only this atomic
+    // claim decides which one actually sends.
+    const claim = await claimFollowup({ customerId: customer.id, gapId, method });
+    claimMade = claim.success;
+    if (!claim.success) {
+      return NextResponse.json({ success: true, sent: false, alreadySent: true });
+    }
 
     if (method === 'sms') {
       if (!twilioClient || !gap.contact_phone) {
+        await releaseFollowup({ customerId: customer.id, gapId });
         return NextResponse.json({ error: 'No phone number on file for this lead' }, { status: 400 });
       }
       const numberResult = await query(
@@ -69,36 +90,45 @@ export async function POST(request) {
       ).catch(() => ({ rows: [] }));
       const fromNumber = numberResult.rows[0]?.phone_number;
       if (!fromNumber) {
+        await releaseFollowup({ customerId: customer.id, gapId });
         return NextResponse.json({ error: 'No business number configured' }, { status: 400 });
       }
 
       await twilioClient.messages.create({
         from: fromNumber,
         to: gap.contact_phone,
-        body: `Following up from ${businessName}: ${body}`,
+        body: `Following up from ${businessName}: ${answerBody}`,
       });
     }
 
     if (method === 'email') {
       if (!gap.contact_email) {
+        await releaseFollowup({ customerId: customer.id, gapId });
         return NextResponse.json({ error: 'No email address on file for this lead' }, { status: 400 });
       }
       const result = await sendEmail({
         from: `${businessName} <alerts@bizzybotai.com>`,
         to: gap.contact_email,
         subject: `Following up on your question`,
-        text: `Hi${gap.contact_name ? ` ${gap.contact_name}` : ''},\n\nYou asked: ${gap.question}\n\n${body}\n\n— ${businessName}`,
+        text: `Hi${gap.contact_name ? ` ${gap.contact_name}` : ''},\n\nYou asked: ${gap.question}\n\n${answerBody}\n\n— ${businessName}`,
       }, 'knowledge-gap follow-up');
 
       if (!result.sent) {
+        await releaseFollowup({ customerId: customer.id, gapId });
         return NextResponse.json({ error: 'Email could not be delivered' }, { status: 502 });
       }
     }
 
-    await recordFollowup({ customerId: customer.id, gapId, method });
     return NextResponse.json({ success: true, sent: true });
   } catch (error) {
     console.error('❌ [GAPS API] follow-up failed:', error.message);
+    if (claimMade && customerId && gapId) {
+      try {
+        await releaseFollowup({ customerId, gapId });
+      } catch (releaseError) {
+        console.error('⚠️ [GAPS API] failed to release claim after error:', releaseError.message);
+      }
+    }
     return NextResponse.json({ error: 'Could not send follow-up' }, { status: 500 });
   }
 }
