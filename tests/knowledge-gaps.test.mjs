@@ -234,6 +234,20 @@ test('parseTranscriptScan drops entries whose question is not a string', () => {
   assert.equal(result.gaps[0].question, 'Open Sunday?');
 });
 
+test('parseTranscriptScan treats placeholder caller names as no name at all', () => {
+  // A real call produced caller_name "Unknown", which then showed on the
+  // dashboard as a caller named Unknown instead of falling back to their number.
+  for (const placeholder of ['Unknown', 'unknown', 'N/A', 'none', 'Not provided', 'anonymous', 'the caller', '   ']) {
+    const raw = JSON.stringify({ gaps: [{ topic: 'pricing', question: 'Veteran discounts?' }], caller_name: placeholder });
+    assert.equal(parseTranscriptScan(raw).callerName, null, `should be null for ${JSON.stringify(placeholder)}`);
+  }
+});
+
+test('parseTranscriptScan keeps a real caller name', () => {
+  const raw = JSON.stringify({ gaps: [], caller_name: 'Dana' });
+  assert.equal(parseTranscriptScan(raw).callerName, 'Dana');
+});
+
 test('parseTranscriptScan handles null and empty input', () => {
   assert.deepEqual(parseTranscriptScan(null).gaps, []);
   assert.deepEqual(parseTranscriptScan('').gaps, []);
