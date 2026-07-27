@@ -11,6 +11,7 @@ import {
   Phone, Wrench, Home, Scissors, HeartHandshake,
   UserPlus, CalendarCheck, Bell, Repeat,
 } from 'lucide-react';
+import Reveal from '@/components/marketing/Reveal';
 
 function DashboardPreview() {
   const leads = [
@@ -18,6 +19,35 @@ function DashboardPreview() {
     { name: 'James Kowalski', score: 71, channel: 'SMS', message: 'What are your rates for a full inspection?', time: '9m', hot: false },
     { name: 'Maria Lopez', score: 68, channel: 'Chat', message: 'Do you service the downtown area?', time: '17m', hot: false },
   ];
+
+  // The page's one orchestrated moment: the top lead arrives while you watch,
+  // acting out the headline. Everything else on the page stays quiet so this
+  // reads as the signature rather than as scattered decoration.
+  //
+  // Stage 0 = the list as it would look a moment ago (Sarah not yet in it).
+  // Stage 1 = her row lands. Stage 2 = the AI's reply lands under it.
+  // Plays once, then rests — a looping hero is a distraction, not a demo.
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Motion turned down: show the finished state immediately, no sequence.
+    if (reduced) {
+      setStage(2);
+      return;
+    }
+
+    const t1 = setTimeout(() => setStage(1), 900);
+    const t2 = setTimeout(() => setStage(2), 1700);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
 
   return (
     <div className="relative w-full max-w-2xl mx-auto">
@@ -60,7 +90,18 @@ function DashboardPreview() {
           <div className="text-[10px] font-medium text-gray-600 uppercase tracking-wider mb-3">Recent Conversations</div>
           <div className="space-y-2">
             {leads.map((lead, i) => (
-              <div key={i} className="flex items-start gap-3 bg-[#0A1020] rounded-xl p-3.5 border border-[#1E2D40]">
+              <div
+                key={i}
+                className={`flex items-start gap-3 bg-[#0A1020] rounded-xl p-3.5 border transition-all duration-700 ease-out motion-reduce:transition-none ${
+                  i === 0 && stage === 0
+                    ? 'opacity-0 -translate-y-2 border-[#1E2D40]'
+                    : 'opacity-100 translate-y-0'
+                } ${
+                  // The new arrival holds a violet edge for one beat, then
+                  // settles into the same border as the rows above it.
+                  i === 0 && stage === 1 ? 'border-violet-500/40' : 'border-[#1E2D40]'
+                }`}
+              >
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                   {lead.name.charAt(0)}
                 </div>
@@ -76,7 +117,11 @@ function DashboardPreview() {
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[10px] text-gray-600">{lead.channel}</span>
                     <span className="text-[10px] text-gray-700">·</span>
-                    <span className="text-[10px] text-violet-400 flex items-center gap-1">
+                    <span
+                      className={`text-[10px] text-violet-400 flex items-center gap-1 transition-opacity duration-500 motion-reduce:transition-none ${
+                        i === 0 && stage < 2 ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    >
                       <Bot className="w-2.5 h-2.5" /> AI replied
                     </span>
                   </div>
@@ -445,7 +490,7 @@ export default function HomePage() {
 
         {/* Founding customer strip */}
         <section className="border-y border-white/[0.06] py-10 px-6 bg-white/[0.02]">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+          <Reveal className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-semibold rounded-full whitespace-nowrap">
                 FOUNDING CUSTOMERS
@@ -466,12 +511,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* How it works */}
         <section id="how-it-works" className="py-28 px-6">
-          <div className="max-w-5xl mx-auto">
+          <Reveal className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">How it works</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Live in under 10 minutes</h2>
@@ -492,12 +537,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Features */}
         <section id="features" className="py-28 px-6 bg-white/[0.02] border-y border-white/[0.06]">
-          <div className="max-w-6xl mx-auto">
+          <Reveal className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Features</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Your business, always on</h2>
@@ -529,12 +574,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Lifecycle strip — the full front office, not just answering */}
         <section className="py-28 px-6">
-          <div className="max-w-6xl mx-auto">
+          <Reveal className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Beyond Answering</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">
@@ -573,12 +618,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Industries */}
         <section id="industries" className="py-28 px-6">
-          <div className="max-w-6xl mx-auto">
+          <Reveal className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Built for your business</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Any business that lives on leads</h2>
@@ -611,12 +656,12 @@ export default function HomePage() {
                 );
               })}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Pricing */}
         <section id="pricing" className="py-28 px-6 bg-white/[0.02] border-y border-white/[0.06]">
-          <div className="max-w-6xl mx-auto">
+          <Reveal className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-4">Pricing</div>
               <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Transparent, simple pricing</h2>
@@ -671,12 +716,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Final CTA */}
         <section className="py-28 px-6">
-          <div className="max-w-4xl mx-auto">
+          <Reveal className="max-w-4xl mx-auto">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600/15 to-cyan-600/15 blur-3xl rounded-3xl" />
               <div className="relative bg-[#0D1421] border border-[#1E2D40] rounded-3xl p-16 text-center">
@@ -698,7 +743,7 @@ export default function HomePage() {
                 </SignInButton>
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* Footer */}
