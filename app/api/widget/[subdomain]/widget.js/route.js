@@ -80,7 +80,7 @@ export async function GET(request, { params }) {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     \`;
     
-    chatButton.innerHTML = '🤖';
+    chatButton.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
     chatButton.title = 'Chat with ' + config.businessName;
     
     chatButton.addEventListener('mouseenter', () => {
@@ -153,7 +153,7 @@ export async function GET(request, { params }) {
     \`;
     header.innerHTML = \`
       <div style="display: flex; align-items: center;">
-        <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">🤖</div>
+        <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
         <div>
           <div>\${config.businessName}</div>
           <div style="font-size: 12px; opacity: 0.9;">AI Assistant</div>
@@ -244,7 +244,7 @@ export async function GET(request, { params }) {
     const chatButton = document.getElementById('ai-chat-widget');
     const chatWindow = document.getElementById('ai-chat-window');
     
-    if (chatButton) chatButton.innerHTML = '🤖';
+    if (chatButton) chatButton.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
     if (chatWindow) chatWindow.remove();
   }
   
@@ -265,15 +265,36 @@ export async function GET(request, { params }) {
       const bubble = document.createElement('div');
       bubble.style.cssText = \`
         max-width: 80%;
-        padding: 8px 12px;
+        padding: 10px 13px;
         border-radius: 12px;
         font-size: 14px;
-        \${msg.from === 'user' 
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        \${msg.from === 'user'
           ? \`background: \${document.querySelector('#ai-chat-widget').style.backgroundColor}; color: white; border-bottom-right-radius: 4px;\`
           : 'background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'
         }
       \`;
-      bubble.textContent = msg.text;
+
+      // The model replies in markdown — bullet lists and **bold** — which
+      // textContent rendered as literal asterisks on one crushed line.
+      //
+      // ⚠️ ORDER IS LOAD-BEARING. The text is escaped FIRST by round-tripping
+      // through textContent, so any < or > is already an entity before a
+      // single replacement runs. Only then is a deliberately tiny markdown
+      // subset applied, and the only tags it can ever produce are <strong>
+      // ones built here — no attributes, so nothing to inject into.
+      // Never reorder these, and never apply a replacement to the raw string:
+      // this text comes from a model and is rendered on customers' websites.
+      const escaper = document.createElement('div');
+      escaper.textContent = msg.text || '';
+      var html = escaper.innerHTML;
+      html = html.replace(/\\*\\*([^*\\n]+)\\*\\*/g, '<strong>$1</strong>');
+      // [ \\t] not \\s — \\s matches newlines, which swallowed the blank line
+      // before a list and pulled the bullets tight against the sentence above.
+      html = html.replace(/^[ \\t]*[-*][ \\t]+/gm, '• ');
+      bubble.innerHTML = html;
       
       messageEl.appendChild(bubble);
       container.appendChild(messageEl);

@@ -12,16 +12,7 @@ import {
   UserPlus, CalendarCheck, Bell, Repeat,
 } from 'lucide-react';
 import Reveal from '@/components/marketing/Reveal';
-import Script from 'next/script';
-
-// BizzyBot's own demo account (customer 863) — the platform demoing itself to
-// prospects, which is the stated purpose of that account. Not a secret: this id
-// already appears in the public widget script URL for every customer.
-//
-// ⚠️ This is a Clerk user id. The Clerk instance was migrated once already
-// (2026-07-20, Development -> Production) and every id changed. If that ever
-// happens again this widget goes quiet with no error — update it here.
-const DEMO_WIDGET_ID = 'user_3Gle14qY1sQNmNCfVf4cOo4DiU1';
+import DemoWidget from '@/components/marketing/DemoWidget';
 
 function DashboardPreview() {
   const leads = [
@@ -783,10 +774,7 @@ export default function HomePage() {
             the dashboard and should not be greeted by a sales widget.
             lazyOnload keeps it off the critical path — this is the most
             SEO-sensitive page in the product. */}
-        <Script
-          src={`/api/widget/${DEMO_WIDGET_ID}/widget.js`}
-          strategy="lazyOnload"
-        />
+        <DemoWidget />
       </SignedOut>
 
       <SignedIn>

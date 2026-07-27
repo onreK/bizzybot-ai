@@ -3,6 +3,7 @@
 // with its own <script type="application/ld+json">. CTAs are plain links to
 // /sign-up (no Clerk hooks) so these pages stay fully server-rendered.
 import Image from 'next/image';
+import DemoWidget from './DemoWidget.js';
 
 export function MarketingNav() {
   return (
@@ -47,6 +48,12 @@ export function MarketingFooter() {
         </div>
         <p className="text-xs text-gray-600">&copy; 2026 BizzyBot. All rights reserved.</p>
       </div>
+
+      {/* Every marketing page routes through this footer, so mounting the
+          widget here covers the vertical landing pages, /podium-alternative
+          and the blog in one place — and a visitor moving between them keeps
+          the same conversation instead of losing the bubble mid-question. */}
+      <DemoWidget />
     </footer>
   );
 }
