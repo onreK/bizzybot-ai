@@ -253,6 +253,18 @@ test('parseTranscriptScan handles null and empty input', () => {
   assert.deepEqual(parseTranscriptScan('').gaps, []);
 });
 
+test('the scan prompt tells the model to normalize wording and how to pick a topic', () => {
+  // Two real calls asking the same thing in different words classified
+  // differently (pricing vs other) until this guidance was added, which broke
+  // the "asked 3x" grouping the whole queue depends on.
+  const prompt = buildTranscriptScanPrompt('Acme Plumbing');
+  assert.match(prompt, /UNDERLYING question/i);
+  assert.match(prompt, /not their exact wording/i);
+  assert.match(prompt, /same question and the same topic/i);
+  assert.match(prompt, /discounts, rates, fees/i);
+  assert.match(prompt, /Never write "Unknown"/i);
+});
+
 test('buildTranscriptScanPrompt names the business and lists every valid topic', () => {
   const prompt = buildTranscriptScanPrompt('Acme Plumbing');
   assert.equal(prompt.includes('Acme Plumbing'), true);
