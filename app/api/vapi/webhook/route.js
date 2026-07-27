@@ -4,6 +4,7 @@ import { createOrUpdateContact, trackLeadEvent, updateLeadScoring } from '@/lib/
 import { sendHotLeadAlert } from '@/lib/owner-alerts.js';
 import { processVoiceDocumentFollowup } from '@/lib/voice-document-followup.js';
 import { processVoiceGapScan } from '@/lib/voice-gap-scan.js';
+import { mayKeepRecording } from '@/lib/recording-consent.js';
 import crypto from 'crypto';
 
 export async function POST(request) {
@@ -52,8 +53,21 @@ export async function POST(request) {
       // lib/vapi.js) — we simply never stored the URL, so the audio existed
       // and was unreachable. Field location moved between Vapi versions, so
       // check both the message and the artifact envelope.
-      const recordingUrl =
+      const rawRecordingUrl =
         message.recordingUrl || message.artifact?.recordingUrl || call.recordingUrl || null;
+
+      // Keep the recording only for callers whose area code places them in a
+      // one-party-consent state. BizzyBot's own end is Virginia (one-party),
+      // so the caller's end governs, and the founder's decision is to keep
+      // recordings rather than announce them on every call. Fails closed:
+      // withheld caller ID, toll-free, non-US or anything unplaceable stores
+      // nothing. See lib/recording-consent.js for what this does NOT do —
+      // Vapi still captures audio on its side regardless.
+      const consentOk = mayKeepRecording(callerPhone);
+      const recordingUrl = consentOk ? rawRecordingUrl : null;
+      if (rawRecordingUrl && !consentOk) {
+        console.log(`🔒 [VOICE] recording discarded — caller ${callerPhone} is not confidently in a one-party state`);
+      }
 
       // Vapi bills per call and includes the exact charge on the report —
       // capture it so the admin Unit Economics panel can show actuals.
