@@ -5,6 +5,7 @@ import { generateSMSResponse } from '../../../../lib/ai-service.js';
 import { query } from '../../../../lib/database.js';
 import { sendHotLeadAlert } from '../../../../lib/owner-alerts.js';
 import { trackLeadEvent } from '../../../../lib/leads-service.js';
+import { applyComplianceFooter } from '../../../../lib/sms-compliance.js';
 
 // Initialize Twilio
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -57,6 +58,23 @@ async function persistSmsExchange(clerkUserId, contactPhone, inboundBody, outbou
   } catch (err) {
     console.error('⚠️ [SMS-WEBHOOK] Failed to persist conversation:', err.message);
   }
+}
+
+// How many outbound texts this contact has already had from this customer.
+// Drives the compliance-footer interval. Returns -1 when unknown or on error,
+// which the footer logic treats as "disclose" — an extra line of text costs
+// nothing, a missed disclosure risks the toll-free verification.
+async function countPriorOutboundSms(clerkUserId, contactPhone) {
+  if (!clerkUserId || !contactPhone) return -1;
+  const result = await query(
+    `SELECT COUNT(*)::int AS n FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.user_id = $1 AND c.type = 'sms' AND c.contact_phone = $2
+       AND m.direction = 'outbound'`,
+    [clerkUserId, contactPhone]
+  ).catch(() => null);
+  const n = result?.rows?.[0]?.n;
+  return Number.isFinite(n) ? n : -1;
 }
 
 // Look up which customer owns this Twilio 'To' number
@@ -251,6 +269,18 @@ export async function POST(request) {
         console.error('⚠️ [SMS-WEBHOOK] Lead capture failed:', leadErr.message);
       }
     }
+
+    // Toll-free compliance footer — business name + opt-out instructions at
+    // regular intervals, per Twilio's Toll-Free Verification requirements.
+    // Applied HERE, in code, after the AI is finished and before anything is
+    // sent or stored: it is deliberately not a customer setting and not a
+    // prompt instruction, because BizzyBot holds the toll-free verification
+    // and would carry the consequence of a customer removing it.
+    const priorOutboundCount = await countPriorOutboundSms(resolvedClerkUserId, fromNumber);
+    aiResponse = applyComplianceFooter(aiResponse, {
+      businessName: aiResult.metadata?.customerConfig,
+      priorOutboundCount,
+    });
 
     // Add AI response to conversation
     conversation.messages.push({

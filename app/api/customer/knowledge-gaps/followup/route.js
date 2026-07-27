@@ -5,6 +5,7 @@ import { query, getCustomerByClerkId } from '@/lib/database.js';
 import { getGapById, claimFollowup, releaseFollowup } from '@/lib/knowledge-gaps-store.js';
 import { sendEmail } from '@/lib/resend-send.js';
 import { hasActiveAccess } from '@/lib/trial-access.js';
+import { applyComplianceFooter } from '@/lib/sms-compliance.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,10 +112,16 @@ export async function POST(request) {
         return NextResponse.json({ error: 'No business number configured' }, { status: 400 });
       }
 
+      // Business-initiated and often days after the lead last texted, so this
+      // always carries the compliance footer rather than following the
+      // conversational interval — priorOutboundCount 0 forces it on.
       await twilioClient.messages.create({
         from: fromNumber,
         to: gap.contact_phone,
-        body: `Following up from ${businessName}: ${answerBody}`,
+        body: applyComplianceFooter(
+          `Following up from ${businessName}: ${answerBody}`,
+          { businessName, priorOutboundCount: 0 }
+        ),
       });
     }
 
