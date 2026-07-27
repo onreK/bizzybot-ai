@@ -44,7 +44,20 @@ export async function GET(request, { params }) {
       );
     }
 
-    const businessName = customer.business_name || 'Our Business';
+    // Greet visitors with the BRAND the AI uses in its own replies
+    // (ai_channel_settings), not the legal entity on the customers row.
+    // "Hi! I'm the Acme Plumbing LLC AI assistant" reads like paperwork; the
+    // rest of the conversation says "Acme Plumbing", so the widget should too.
+    const brandResult = await query(
+      `SELECT business_name FROM ai_channel_settings
+       WHERE customer_id = $1 AND COALESCE(business_name, '') <> ''
+       ORDER BY (channel = 'chatbot') DESC
+       LIMIT 1`,
+      [customer.id]
+    ).catch(() => ({ rows: [] }));
+
+    const businessName =
+      brandResult.rows[0]?.business_name?.trim() || customer.business_name || 'Our Business';
     return NextResponse.json(
       {
         active: true,
