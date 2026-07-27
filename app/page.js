@@ -2,7 +2,7 @@
 
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Brain, ArrowRight, CheckCircle, Star, Zap,
@@ -14,44 +14,69 @@ import {
 import Reveal from '@/components/marketing/Reveal';
 import DemoWidget from '@/components/marketing/DemoWidget';
 
-function DashboardPreview() {
-  const leads = [
-    { name: 'Sarah Mitchell', score: 94, channel: 'Voice', message: 'Called about a consultation this week — AI booked it', time: '2m', hot: true },
-    { name: 'James Kowalski', score: 71, channel: 'SMS', message: 'What are your rates for a full inspection?', time: '9m', hot: false },
-    { name: 'Maria Lopez', score: 68, channel: 'Chat', message: 'Do you service the downtown area?', time: '17m', hot: false },
-  ];
+// Leads cycle through the hero dashboard. Deliberately mixed channels and
+// scores so the loop reads as a real inbox rather than a repeating demo.
+const LEAD_POOL = [
+  { name: 'Sarah Mitchell', score: 94, channel: 'Voice', message: 'Called about a consultation this week — AI booked it', hot: true },
+  { name: 'James Kowalski', score: 71, channel: 'SMS', message: 'What are your rates for a full inspection?', hot: false },
+  { name: 'Maria Lopez', score: 68, channel: 'Chat', message: 'Do you service the downtown area?', hot: false },
+  { name: 'Dev Patel', score: 88, channel: 'SMS', message: 'Need someone out this week — are you available Thursday?', hot: true },
+  { name: 'Erin Brady', score: 62, channel: 'Email', message: 'Sent through the contact form asking about pricing', hot: false },
+  { name: 'Tom Okafor', score: 79, channel: 'Voice', message: 'Missed call at 11pm — AI answered and took the details', hot: false },
+];
 
-  // The page's one orchestrated moment: the top lead arrives while you watch,
-  // acting out the headline. Everything else on the page stays quiet so this
-  // reads as the signature rather than as scattered decoration.
+function DashboardPreview() {
+  // The page's one orchestrated moment: leads keep arriving while you watch,
+  // which is literally what the product does. Everything else on the page
+  // stays quiet so this reads as the signature rather than as decoration.
   //
-  // Stage 0 = the list as it would look a moment ago (Sarah not yet in it).
-  // Stage 1 = her row lands. Stage 2 = the AI's reply lands under it.
-  // Plays once, then rests — a looping hero is a distraction, not a demo.
-  const [stage, setStage] = useState(0);
+  // Starts when the dashboard SCROLLS INTO VIEW, not on page load — it sits
+  // below the fold, so a load-triggered sequence finishes before anyone has
+  // looked at it. Then a new lead lands every few seconds and the oldest
+  // drops off the bottom.
+  const [offset, setOffset] = useState(0);
+  const [live, setLive] = useState(false);
+  const previewRef = useRef(null);
+
+  const leads = [0, 1, 2].map((i) => LEAD_POOL[(offset + i) % LEAD_POOL.length]);
+  const AGES = ['just now', '6m', '14m'];
 
   useEffect(() => {
+    const node = previewRef.current;
+    if (!node) return;
+
     const reduced =
-      typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Motion turned down: show the finished state immediately, no sequence.
-    if (reduced) {
-      setStage(2);
-      return;
-    }
+    // Motion turned down, or no observer: a still, complete dashboard.
+    if (reduced || typeof IntersectionObserver === 'undefined') return;
 
-    const t1 = setTimeout(() => setStage(1), 900);
-    const t2 = setTimeout(() => setStage(2), 1700);
+    let timer;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setLive(true);
+          timer = setInterval(() => setOffset((o) => o + 1), 4200);
+        } else {
+          // Pause while off-screen: no point animating to nobody, and it
+          // keeps the tab quiet when the page is scrolled away.
+          setLive(false);
+          clearInterval(timer);
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    observer.observe(node);
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      observer.disconnect();
+      clearInterval(timer);
     };
   }, []);
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
+    <div ref={previewRef} className="relative w-full max-w-2xl mx-auto">
       <div className="absolute -inset-6 bg-gradient-to-r from-violet-600/15 to-cyan-500/15 blur-3xl rounded-3xl" />
       <div className="relative bg-[#0D1421] border border-[#1E2D40] rounded-2xl overflow-hidden shadow-2xl">
         {/* Browser chrome */}
@@ -92,15 +117,15 @@ function DashboardPreview() {
           <div className="space-y-2">
             {leads.map((lead, i) => (
               <div
-                key={i}
-                className={`flex items-start gap-3 bg-[#0A1020] rounded-xl p-3.5 border transition-all duration-700 ease-out motion-reduce:transition-none ${
-                  i === 0 && stage === 0
-                    ? 'opacity-0 -translate-y-2 border-[#1E2D40]'
-                    : 'opacity-100 translate-y-0'
-                } ${
-                  // The new arrival holds a violet edge for one beat, then
-                  // settles into the same border as the rows above it.
-                  i === 0 && stage === 1 ? 'border-violet-500/40' : 'border-[#1E2D40]'
+                // Keyed by which lead is in which slot, so React remounts the
+                // top row on every cycle and its entrance animation replays.
+                key={`${offset}-${i}`}
+                className={`flex items-start gap-3 bg-[#0A1020] rounded-xl p-3.5 border ${
+                  // Only the newest row animates in and carries the violet
+                  // edge; the rows below simply shift down beneath it.
+                  i === 0 && live
+                    ? 'animate-slide-up border-violet-500/40'
+                    : 'border-[#1E2D40]'
                 }`}
               >
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -112,17 +137,13 @@ function DashboardPreview() {
                     {lead.hot && (
                       <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-medium">HOT</span>
                     )}
-                    <span className="text-[10px] text-gray-600 ml-auto">{lead.time} ago</span>
+                    <span className="text-[10px] text-gray-600 ml-auto">{AGES[i]}</span>
                   </div>
                   <div className="text-xs text-gray-400 truncate">{lead.message}</div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[10px] text-gray-600">{lead.channel}</span>
                     <span className="text-[10px] text-gray-700">·</span>
-                    <span
-                      className={`text-[10px] text-violet-400 flex items-center gap-1 transition-opacity duration-500 motion-reduce:transition-none ${
-                        i === 0 && stage < 2 ? 'opacity-0' : 'opacity-100'
-                      }`}
-                    >
+                    <span className="text-[10px] text-violet-400 flex items-center gap-1">
                       <Bot className="w-2.5 h-2.5" /> AI replied
                     </span>
                   </div>
@@ -447,10 +468,6 @@ export default function HomePage() {
         <section className="relative pt-40 pb-24 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium px-3 py-1.5 rounded-full mb-8">
-                <Zap className="w-3 h-3" />
-                The AI receptionist for any client-facing business
-              </div>
 
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.08]">
                 Every lead answered.
