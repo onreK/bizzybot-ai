@@ -27,7 +27,7 @@ export async function GET() {
 
     const [logsResult, monthlyResult] = await Promise.all([
       query(
-        `SELECT vapi_call_id, caller_phone, duration_seconds, status, transcript, summary, started_at, ended_at
+        `SELECT vapi_call_id, caller_phone, duration_seconds, status, transcript, summary, started_at, ended_at, recording_url
          FROM vapi_call_logs
          WHERE customer_id = $1 OR clerk_user_id = $2
          ORDER BY started_at DESC NULLS LAST

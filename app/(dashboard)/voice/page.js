@@ -68,6 +68,17 @@ function CallRow({ call }) {
 
       {expanded && call.transcript && (
         <div className="px-4 pb-4 border-t border-gray-800/50 pt-3 space-y-2">
+          {/* Hearing the call is a different kind of reassurance from reading
+              it — tone and pacing are what owners are actually anxious about.
+              Only calls recorded after 2026-07-27 carry a URL. */}
+          {call.recording_url && (
+            <div className="bg-[#0D1117] rounded-lg px-3 py-2">
+              <p className="text-xs text-gray-500 font-medium mb-2">Recording</p>
+              <audio controls preload="none" src={call.recording_url} className="w-full h-8">
+                Your browser can&apos;t play this recording.
+              </audio>
+            </div>
+          )}
           {call.summary && (
             <div className="bg-violet-500/5 border border-violet-500/20 rounded-lg px-3 py-2">
               <p className="text-xs text-violet-400 font-medium mb-1">AI Summary</p>

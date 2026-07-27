@@ -48,6 +48,12 @@ export async function POST(request) {
       const transcript = message.transcript || call.transcript || null;
       const summary = message.summary || call.summary || null;
       const endedReason = message.endedReason || call.endedReason || 'completed';
+      // Vapi has been recording every call already (recordingEnabled: true in
+      // lib/vapi.js) — we simply never stored the URL, so the audio existed
+      // and was unreachable. Field location moved between Vapi versions, so
+      // check both the message and the artifact envelope.
+      const recordingUrl =
+        message.recordingUrl || message.artifact?.recordingUrl || call.recordingUrl || null;
 
       // Vapi bills per call and includes the exact charge on the report —
       // capture it so the admin Unit Economics panel can show actuals.
@@ -58,18 +64,20 @@ export async function POST(request) {
 
       // 1. Save call log (cost column auto-added for pre-existing tables)
       await query(`ALTER TABLE vapi_call_logs ADD COLUMN IF NOT EXISTS cost NUMERIC`).catch(() => {});
+      await query(`ALTER TABLE vapi_call_logs ADD COLUMN IF NOT EXISTS recording_url TEXT`).catch(() => {});
       await query(`
         INSERT INTO vapi_call_logs
           (customer_id, clerk_user_id, vapi_call_id, caller_phone, duration_seconds,
-           status, transcript, summary, started_at, ended_at, cost)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           status, transcript, summary, started_at, ended_at, cost, recording_url)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (vapi_call_id) DO UPDATE SET
           duration_seconds = EXCLUDED.duration_seconds,
           status           = EXCLUDED.status,
           transcript       = EXCLUDED.transcript,
           summary          = EXCLUDED.summary,
           ended_at         = EXCLUDED.ended_at,
-          cost             = COALESCE(EXCLUDED.cost, vapi_call_logs.cost)
+          cost             = COALESCE(EXCLUDED.cost, vapi_call_logs.cost),
+          recording_url    = COALESCE(EXCLUDED.recording_url, vapi_call_logs.recording_url)
       `, [
         owner.customer_id,
         owner.clerk_user_id,
@@ -82,6 +90,7 @@ export async function POST(request) {
         startedAt ? new Date(startedAt) : null,
         endedAt ? new Date(endedAt) : null,
         callCost,
+        recordingUrl,
       ]).catch(err => console.error('⚠️ vapi_call_logs insert failed:', err.message));
 
       // 2. Create/update contact + track lead event
