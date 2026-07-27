@@ -42,7 +42,24 @@ export async function POST(request) {
       return NextResponse.json({ success: true, sent: false, alreadySent: true });
     }
 
-    const businessName = customer.business_name || 'us';
+    // Use the SAME name the AI signs its own replies with. That lives on
+    // ai_channel_settings (the brand, e.g. "BizzyBot"), not on customers
+    // (the legal entity, e.g. "Bizzy Bot Ai LLC"). A lead who has been
+    // texting "BizzyBot" all conversation should not suddenly get a message
+    // from a differently-named company. Prefer the channel this gap came in
+    // on, fall back to any configured channel, then to the legal name.
+    const SETTINGS_CHANNEL = { sms: 'text', gmail: 'email', email: 'email', chat: 'chatbot' };
+    const settingsChannel = SETTINGS_CHANNEL[gap.channel] || gap.channel;
+    const brandResult = await query(
+      `SELECT business_name FROM ai_channel_settings
+       WHERE customer_id = $1 AND COALESCE(business_name, '') <> ''
+       ORDER BY (channel = $2) DESC
+       LIMIT 1`,
+      [customer.id, settingsChannel]
+    ).catch(() => ({ rows: [] }));
+
+    const businessName =
+      brandResult.rows[0]?.business_name?.trim() || customer.business_name || 'us';
     const answerBody = String(answer || gap.answer || '').trim();
 
     // Sending costs real money, so it follows the same trial gate as every

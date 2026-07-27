@@ -126,7 +126,9 @@ export default function KnowledgeGapsCard() {
           {error && <p className="text-xs text-red-400 px-1">{error}</p>}
           {waiting.leads.map(lead => (
             <div key={lead.gapId} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-[#0D1117] border border-gray-800">
-              <span className="text-sm text-white">{lead.contactName || 'Unknown'}</span>
+              <span className="text-sm text-white">
+                {lead.contactName || lead.contactPhone || lead.contactEmail || 'Unknown'}
+              </span>
               <span className="text-xs text-gray-500">
                 {CHANNEL_LABELS[lead.channel] || lead.channel} · &ldquo;{lead.question}&rdquo;
               </span>
@@ -221,7 +223,7 @@ export default function KnowledgeGapsCard() {
                 <div key={q.id} className="flex flex-wrap items-baseline gap-2 text-xs">
                   <span className="text-gray-300">&ldquo;{q.question}&rdquo;</span>
                   <span className="text-gray-600">
-                    {q.contactName || 'unknown'} · {CHANNEL_LABELS[q.channel] || q.channel} · {relativeDay(q.createdAt)}
+                    {q.contactName || q.contactPhone || q.contactEmail || 'unknown'} · {CHANNEL_LABELS[q.channel] || q.channel} · {relativeDay(q.createdAt)}
                   </span>
                 </div>
               ))}
