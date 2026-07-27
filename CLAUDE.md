@@ -153,7 +153,20 @@ All plans profitable even fully maxed. Business is the one to watch — swings f
 
 ## Database Tables
 
-`customers`, `conversations`, `messages`, `hot_leads`, `gmail_connections`, `gmail_conversations`, `gmail_messages`, `email_conversations`, `email_messages`, `ai_analytics_events`, `contacts`, `customer_phone_numbers`, `ai_channel_settings`, `facebook_connections`, `instagram_connections`, `outlook_connections`, `outlook_conversations`, `outlook_messages`, `vapi_call_logs`, `business_profiles`
+`customers`, `conversations`, `messages`, `hot_leads`, `gmail_connections`, `gmail_conversations`, `gmail_messages`, `email_conversations`, `email_messages`, `ai_analytics_events`, `contacts`, `customer_phone_numbers`, `ai_channel_settings`, `facebook_connections`, `instagram_connections`, `outlook_connections`, `outlook_conversations`, `outlook_messages`, `vapi_call_logs`, `business_profiles`, `email_triage`, `knowledge_gaps`
+
+---
+
+## ⚠️ Code Gotchas (bite every time — read before touching these)
+
+- **`customerConfig.id` is pinned deliberately.** `getCustomerAIConfiguration` (lib/ai-service.js) spreads `ai_configs` and `email_settings` over the customer row, and both tables have their own `id` PK — that silently overwrote `customer.id` (863 → 4, JPH's 875 → 8) for ~12 call sites that treat it as a customer id. `id: customer.id` + `customer_id: customer.id` are now the LAST keys in the merge. **Never move them, and never add another spread after them.** Found 2026-07-27 by live test; the bug had been silently breaking lead-context lookups for months.
+- **Two business names, and they differ.** `ai_channel_settings.business_name` = the BRAND the AI signs replies with ("BizzyBot"); `customers.business_name` = the LEGAL entity ("Bizzy Bot Ai LLC"). Any outbound customer-facing message must use the brand, or a lead gets messages from two apparently different companies.
+- **Vapi holds its own copy of the system prompt.** Editing `buildVoiceSystemPrompt` changes NOTHING for already-provisioned assistants until AI Settings → Voice → Save & Sync, `/api/vapi/provision`, or `/api/admin/sync-vapi` runs. Text channels read `ai_channel_settings` fresh per message; voice does not. Every voice-prompt change needs a sync step in its test plan or it looks broken.
+- **Querying prod DB from a local machine:** `DATABASE_URL` points at `postgres.railway.internal`, which only resolves inside Railway. Use the public proxy instead:
+  `DATABASE_URL="$(railway variables --service Postgres --kv | grep '^DATABASE_PUBLIC_URL=' | sed 's/^DATABASE_PUBLIC_URL=//')" node script.mjs`
+  Import `lib/database.js` rather than building a Pool — it already has the right SSL config.
+- **LLMs write placeholder words where the schema says null** — a real call returned `caller_name: "Unknown"`, which stored a caller named Unknown. Filter placeholders (`unknown`/`n/a`/`none`/`anonymous`…) whenever a model fills an optional field.
+- **Windows/ESM:** absolute-path imports in a scratch `.mjs` need a `file:///C:/...` URL; a bare `C:/...` throws `ERR_UNSUPPORTED_ESM_URL_SCHEME`.
 
 ---
 
@@ -195,6 +208,7 @@ All plans profitable even fully maxed. Business is the one to watch — swings f
 - Email intent triage — every inbound email classified (5 classes, two-tier gpt-4o-mini→gpt-4o, asymmetric caution) before any AI reply; "Left for you" inbox flags + one-click corrections feed few-shot learning; eval-gated (scripts/triage-eval.mjs); HOT_LEAD_KEYWORDS de-fanged (shared lib/hot-lead-keywords.js, capped below hot threshold)
 - Unit Economics panel on ACTUALS (2026-07-20) — exact Vapi per-call costs (webhook capture + backfill), exact Twilio per-message prices, measured OpenAI rate, per-cost basis labels; estimates remain only as fallbacks
 - Documents Phase A (voice) — LIVE-VERIFIED 2026-07-20: caller asks for a doc → AI collects + letter-by-letter confirms email → doc link emailed immediately post-call, link works; doc targeting w/ 'when' field, phantom-dot extraction hardening, post-call pipeline (plan: docs/superpowers/plans/2026-07-18-documents-phase-a.md). Phase B (storage/attachments) + Phase C (receiving) deferred; "text you the link" for mobile callers = recommended next
+- **Unanswered-questions queue (AI Brain roadmap #1) — SHIPPED + LIVE-VERIFIED 2026-07-27.** When the AI can't answer, the gap is queued on Overview grouped by topic; owner answers once → written to ALL SIX channel knowledge bases + Vapi re-synced → leads still waiting get Text / Email / "I handled it". All 7 channels: text uses an in-band `[UNKNOWN:topic|question]` marker stripped before send (free, same trick as `[ESCALATE]`/`[BOOK:]`); voice uses a post-call `gpt-4o-mini` transcript scan (catches confident-but-wrong answers the marker can't). Files: `lib/knowledge-gaps.js` (pure), `lib/knowledge-gaps-store.js` (DB), `lib/voice-gap-scan.js`, 4 routes under `app/api/customer/knowledge-gaps/`, `components/dashboard/KnowledgeGapsCard.js`. Spec + plan in `docs/superpowers/`. 69 tests.
 - Trial expiration + voice-minute-cap enforcement (2026-07-21) — code-complete, ⏳ live-test still owed (see NEXT SESSION TODO). No grace period: trial ends w/ no Stripe sub → AI goes fully SILENT on every channel (SMS/email/chat/social send nothing — not a fallback line; voice forwards to human cell or hangs up). Dashboard/leads/settings stay viewable + amber "trial ended → pick a plan" banner (`/api/customer/access-status` polled every 5min). Paying customers over their plan's voice-minute allowance (15/100/400) also cut off from AI voice. Single shared module `lib/trial-access.js` (`hasActiveAccess` / `canUseVoiceAI` / `isAiSilencedForClerkUser`), 5 unit tests. **This is the hard enforcement of voice minutes that the 07-10 audit had deferred.**
 
 ### ⏳ Waiting on External Approvals
@@ -273,7 +287,14 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 
 ---
 
-## ☀️ NEXT SESSION TODO (start here — updated 2026-07-21)
+## ☀️ NEXT SESSION TODO (start here — updated 2026-07-27)
+
+**✅ 07-27: UNANSWERED-QUESTIONS QUEUE SHIPPED + LIVE-VERIFIED** (AI Brain roadmap #1 — see Completed + Session Log). Nothing outstanding on it. Remaining AI-Brain roadmap items, in the founder's original priority order: **#2 structured facts (service-area zips/radius + business-hours fields)** — still the highest-value next one, since "do you cover X?" is the #1 local-lead question and the queue will now show you exactly how often it's asked; then #3 master brain + per-channel overrides (the queue already writes to all six, so this is half-done in spirit); #4 website import; #5 test sandbox; #6 owner notes per lead; #7 voice-to-voice Vapi memory.
+
+**Open decisions from the queue build (neither blocks anything):**
+- The 4 knowledge-gap API routes spend real money (Twilio/Resend) and have NO automated tests — repo has no mocking framework, adding one was ruled out of scope. Decide whether to introduce one (it would also unlock testing the other ~40 untested routes) or keep relying on manual checks.
+- Deferred minors are recorded in the git history of the fix commits, not in a ledger (workspace deleted). Notable ones: voice scan skips calls with blocked caller ID; `ensureKnowledgeGapsTable` fires 3 DDL statements per record; `dismiss()` never checks `res.ok`.
+
 
 **✅ FIXED 2026-07-21 — trial enforcement had disabled the founder's own demo account (863).** 863 has no Stripe sub + is >14 days old, so `hasActiveAccess(863)` was false → the gate had switched its AI OFF on every channel (voice forwarded to cell/hung up; SMS/email/chat silent). Fixed: `lib/trial-access.js` now has a comp-account allowlist (`COMP_ACCOUNT_IDS`, defaults to `863`, extendable via env — matched by numeric customer id since Clerk ids can change). Comp accounts bypass BOTH the trial check (`hasActiveAccess`) and the voice-minute cap (`canUseVoiceAI`), so the demo never goes dark. Added `id` to the SELECTs in `access-status` + `isAiSilencedForClerkUser` so the check works everywhere; 2 new tests (31 total, all pass). To add more comp accounts later, set `COMP_ACCOUNT_IDS="863,NNN"` in Railway. **SEPARATE non-bug (still true): the "enter your PIN" prompt when calling 866 = calling the toll-free FROM the same cell it forwards to → carrier voicemail asks for the voicemail password; unrelated to any update — always test voice from a DIFFERENT phone.**
 
@@ -338,6 +359,17 @@ Calendly webhook (~3-4 hrs) → Dashboard analytics redesign → **Document rece
 ---
 
 ## Session Log
+
+### Session — 2026-07-26/27 (Unanswered-questions queue SHIPPED + live-verified · a months-old customer-id bug found)
+
+- **Built AI-Brain roadmap #1 end to end** via brainstorm → spec → plan → subagent-driven execution (8 tasks, 11 fix rounds, ~30 commits). Spec `docs/superpowers/specs/2026-07-26-unanswered-questions-queue-design.md`, plan `docs/superpowers/plans/2026-07-26-unanswered-questions-queue.md`. Founder decisions: all 7 channels (voice folded in from phase 2), clear-blanks-only detection on text, write-back to ALL channels, owner-initiated recovery (nothing auto-sends), Overview placement, fixed 9-topic vocabulary for grouping.
+- **Reviews caught (pre-ship, all defects in the PLAN's own sample code, not implementer error):** marker leaking `[UNKNO…` to a phone when the question contained a bracket · a "never throws" function throwing on explicit `null` (JS defaults only cover `undefined`) · anonymous web-chat visitors all deduping into one row (`COALESCE(x,'')` makes every NULL equal — use `IS NOT DISTINCT FROM`) · a swallowed mark-answered failure that would DUPLICATE hand-written KB content on retry (now one transaction via `getDbClient()`) · check-then-act replay guard that a fast double-click defeats (now claim-then-send + release on every failure path, the same pattern Gmail's 8-replies-to-one-email incident forced) · a green "your AI answered everything" shown when the fetch simply failed.
+- **Whole-branch review found what per-task reviews structurally could not:** SMS gaps recorded with NO phone number, because `generateSMSResponse` passes the number as `channelSpecificData.phoneNumber`, never `contactPhone` — the "Text the answer" button could never have rendered. Lived in the seam between two tasks; both individual reviews were correct.
+- **🔴 LIVE TESTING FOUND A MONTHS-OLD BUG NOTHING ELSE COULD: `customerConfig.id` was never the customer id.** See Code Gotchas. 863 resolved to 4, JPH's 875 to 8. ~12 call sites affected (lead context, contact creation, lead scoring, engagement signals, document sends). Failed silently in the safe direction — lookups found nothing and the AI just went without context — which is why it survived. Fixed by pinning `id`/`customer_id` last in the merge.
+- **Three more surfaced only by real traffic:** follow-ups signed with the LEGAL name while the AI signs with the BRAND · the scan model writing `caller_name: "Unknown"` instead of null · the same question classifying two different ways (`pricing` vs `other`) which splits one gap into two entries and breaks "asked 3×" counting. Scan prompt now normalizes to the UNDERLYING question and maps topics to the words callers actually use — evaluated against both real phrasings, now identical topic AND identical question text.
+- **Live-verified on production**, both mechanisms: SMS marker → clean reply → queued → answered → all 6 KBs written → follow-up text delivered → **double-click sent exactly one message** (the race guard, the one thing no test covers). Voice → post-call scan queued the gap → after Save & Sync the AI declined to guess and asked for the caller's name ("Zach") → captured.
+- **Known gap, founder's call:** the 4 API routes that spend real money (Twilio/Resend) have NO automated tests — repo has no mocking framework and adding one was out of scope. The double-click was verified by hand instead.
+- **Process note that paid off repeatedly:** dispatch reviewers with an *adversarial* brief ("find an input that leaks", "check the placeholder numbering element-by-element"), not "review this". Every Critical this session came from a reviewer told what to attack. Tests passing proved little — 46 tests passed on the leaking regex, because tests and code shared the same wrong mental model.
 
 ### Session — 2026-07-21 (SEO vertical landing pages + GEO strategy — first content push)
 
