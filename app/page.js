@@ -341,7 +341,6 @@ export default function HomePage() {
               <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
               <a href="#features" className="hover:text-white transition-colors">Features</a>
               <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-              <a href="/demo" className="hover:text-white transition-colors">Demo</a>
             </div>
 
             <div className="hidden md:flex items-center gap-3">
@@ -368,7 +367,6 @@ export default function HomePage() {
                 <a href="#how-it-works" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>How it works</a>
                 <a href="#features" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Features</a>
                 <a href="#pricing" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-                <a href="/demo" className="block text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(false)}>Demo</a>
                 <SignInButton mode="modal">
                   <button className="block text-gray-400 hover:text-white">Sign in</button>
                 </SignInButton>
@@ -490,13 +488,27 @@ export default function HomePage() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </SignInButton>
-                <a
-                  href="/demo"
+                <button
+                  onClick={() => {
+                    // The chat bubble IS the demo — /demo was a second, worse
+                    // copy of it. The widget is lazyOnload, so a fast click can
+                    // land before the bubble exists: poll briefly rather than
+                    // dropping straight to the fallback, otherwise an eager
+                    // visitor gets a scroll instead of the thing they asked for.
+                    let tries = 0;
+                    const openChat = () => {
+                      const bubble = document.getElementById('ai-chat-widget');
+                      if (bubble) return bubble.click();
+                      if (++tries < 10) return setTimeout(openChat, 150);
+                      document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                    };
+                    openChat();
+                  }}
                   className="flex items-center gap-2 border border-white/10 text-gray-300 px-7 py-3.5 rounded-xl hover:bg-white/5 transition-all text-sm"
                 >
-                  See it in action
+                  Talk to it now
                   <ChevronRight className="w-4 h-4" />
-                </a>
+                </button>
               </div>
 
               <p className="text-xs text-gray-600 mt-4">No credit card required · Cancel anytime</p>
@@ -776,7 +788,6 @@ export default function HomePage() {
             <div className="flex gap-6 text-sm text-gray-500">
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
-              <a href="/demo" className="hover:text-white transition-colors">Demo</a>
             </div>
             <p className="text-xs text-gray-600">&copy; 2026 BizzyBot. All rights reserved.</p>
           </div>

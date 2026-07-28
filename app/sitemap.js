@@ -12,7 +12,6 @@ export default function sitemap() {
     { path: '/podium-alternative', priority: 0.8, changeFrequency: 'weekly' },
     { path: '/blog/ai-receptionist-cost', priority: 0.7, changeFrequency: 'monthly' },
     { path: '/pricing', priority: 0.7, changeFrequency: 'monthly' },
-    { path: '/demo', priority: 0.6, changeFrequency: 'monthly' },
     { path: '/privacy', priority: 0.3, changeFrequency: 'yearly' },
     { path: '/terms', priority: 0.3, changeFrequency: 'yearly' },
   ];
