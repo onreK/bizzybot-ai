@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { DEMO_WIDGET_ID } from '@/components/marketing/DemoWidget';
 import Link from 'next/link';
 import { Zap, MessageCircle } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
@@ -59,12 +60,17 @@ export default function DemoPage() {
     setHotLeadAlert(null);
 
     try {
-      const response = await fetch('/api/chat', {
+      // /api/chat requires a Clerk session and 401s for visitors — this page
+      // is public and linked from the landing page's "See it in action" CTA,
+      // so every prospect who typed here got nothing back. The widget chat
+      // route is the public one, already used by the site-wide chat bubble,
+      // and talks to the same demo-account brain.
+      const response = await fetch(`/api/widget/${DEMO_WIDGET_ID}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [{ role: 'user', content: messageToSend }],
-          conversationKey
+          sessionId: conversationKey
         })
       });
 

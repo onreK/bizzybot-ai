@@ -5,7 +5,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getAIConfigForUser } from '../ai-config/route.js';
 // Import centralized AI service for enhanced features
 import { generateChatResponse } from '../../../lib/ai-service.js';
-import { HOT_LEAD_KEYWORDS } from '../../../lib/hot-lead-keywords.js';
+import { scoreKeywordMatches, KEYWORD_SCORE_CAP } from '../../../lib/hot-lead-keywords.js';
 
 // Force dynamic rendering for authentication
 export const dynamic = 'force-dynamic';
@@ -158,10 +158,13 @@ export async function POST(req) {
       // branch had its own array of real-estate phrases ("cash buyer",
       // "schedule showing", "ready to make an offer") that predated the
       // multi-industry pivot and never received the 2026-07-19 de-fang.
-      const messageContent = userMessage.content.toLowerCase();
-      const isHotLead = HOT_LEAD_KEYWORDS.some(keyword =>
-        messageContent.includes(keyword.toLowerCase())
-      );
+      // Scored, not a boolean match. A single keyword used to set 70 — above
+      // the hot threshold of 60 — which is exactly the pattern the 2026-07-19
+      // de-fang removed everywhere else, and how a support engineer became an
+      // $18k hot lead. Keywords may nudge; they can never alone make a lead
+      // hot (the shared cap is 45).
+      const keywordScore = scoreKeywordMatches(userMessage.content);
+      const isHotLead = keywordScore >= KEYWORD_SCORE_CAP;
 
       // Build system prompt using user's configuration
       let systemPrompt = aiConfig.systemPrompt;
@@ -211,7 +214,7 @@ Aim to capture the customer's contact details and book an appointment when it is
         response: assistantMessage,
         hotLead: {
           isHotLead: isHotLead,
-          score: isHotLead ? 70 : 10,
+          score: keywordScore,
           reasoning: isHotLead ? 'Hot lead keywords detected' : 'No hot lead indicators'
         },
         metadata: {
