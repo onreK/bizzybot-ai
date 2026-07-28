@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, PhoneCall, PhoneOff, Clock, Mic, RefreshCw, ChevronDown, ChevronUp, Zap, ArrowUpRight } from 'lucide-react';
+import { Phone, PhoneCall, PhoneOff, Clock, Mic, RefreshCw, ChevronDown, ChevronUp, Zap, ArrowUpRight, Copy, Check, AlertTriangle } from 'lucide-react';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '—';
@@ -104,6 +104,133 @@ function CallRow({ call }) {
   );
 }
 
+/**
+ * Keep your existing number.
+ *
+ * The capability already worked — a business forwards their own line to their
+ * BizzyBot number and the AI answers, with the original caller's number
+ * arriving intact (verified live 2026-07-28). Nothing in the product said so,
+ * which for a customer is indistinguishable from it not existing.
+ *
+ * This is the single biggest objection remover for any established business:
+ * their number is on their trucks, their signs, their Google listing and years
+ * of reviews. They will never swap it for a new one.
+ */
+function KeepYourNumber({ bizzybotNumber, callMode, onUseAiFirst }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const digits = String(bizzybotNumber || '').replace(/\D/g, '');
+  const dialCode = digits ? `**61*${digits.length === 10 ? '1' + digits : digits}#` : '';
+
+  async function copyNumber() {
+    try {
+      await navigator.clipboard.writeText(formatPhone(bizzybotNumber));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked — the number is on screen to read */ }
+  }
+
+  if (!bizzybotNumber) return null;
+
+  return (
+    <div className="bg-[#161B22] border border-gray-800 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <Phone className="w-4 h-4 text-violet-400" />
+        <div className="flex-1">
+          <p className="text-white text-sm font-medium">Already have a business number?</p>
+          <p className="text-gray-500 text-xs mt-0.5">
+            Keep it. Point it at BizzyBot when nobody answers — your customers never see a new number.
+          </p>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 border-t border-gray-800/50 pt-4 space-y-4">
+          <div>
+            <p className="text-xs text-gray-400 mb-2">
+              <span className="text-violet-400 font-medium">1.</span> Forward your business line to this number
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-[#0D1117] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white font-mono">
+                {formatPhone(bizzybotNumber)}
+              </code>
+              <button
+                onClick={copyNumber}
+                className="px-3 py-2 bg-[#0D1117] border border-gray-800 hover:border-gray-700 rounded-lg text-xs text-gray-300 flex items-center gap-1.5 transition-colors"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-400 mb-2">
+              <span className="text-violet-400 font-medium">2.</span> Turn on &ldquo;forward when unanswered&rdquo;
+            </p>
+            <div className="bg-[#0D1117] border border-gray-800 rounded-lg px-3 py-2.5 space-y-2">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                <span className="text-gray-300 font-medium">Business or office line:</span> it&apos;s in your phone
+                provider&apos;s settings, usually called <em>call forwarding</em> &rarr; <em>when unanswered</em> or
+                <em> conditional call forwarding</em>. If you can&apos;t find it, your provider can switch it on in a
+                couple of minutes — just give them the number above.
+              </p>
+              {dialCode && (
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  <span className="text-gray-300 font-medium">Mobile:</span> dial{' '}
+                  <code className="text-violet-300 font-mono">{dialCode}</code> and press call.
+                  To undo it later, dial <code className="text-violet-300 font-mono">##61#</code>.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-400 mb-2">
+              <span className="text-violet-400 font-medium">3.</span> Set BizzyBot to answer straight away
+            </p>
+            {callMode === 'ai_first' ? (
+              <div className="bg-green-500/5 border border-green-500/20 rounded-lg px-3 py-2.5 flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                <p className="text-xs text-gray-300">
+                  You&apos;re set to <span className="text-white font-medium">AI answers first</span> — correct for this setup.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    You&apos;re on <span className="text-white font-medium">Ring my phone first</span>. Your own phone
+                    already rings before it forwards, so BizzyBot would ring you a second time — callers end up waiting
+                    around 40 seconds and hang up.
+                  </p>
+                </div>
+                <button
+                  onClick={onUseAiFirst}
+                  className="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Switch to AI answers first
+                </button>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Callers keep dialling your usual number and never see this one. Texting still comes to your BizzyBot number
+            — most business landlines can&apos;t receive texts.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VoicePage() {
   const [status, setStatus] = useState(null);
   const [stats, setStats] = useState(null);
@@ -118,14 +245,17 @@ export default function VoicePage() {
   const [savingCall, setSavingCall] = useState(false);
   const [callMsg, setCallMsg] = useState('');
 
-  async function saveCallSettings() {
+  // modeOverride exists because setCallMode is async — a caller that flips the
+  // mode and saves in the same tick would otherwise persist the OLD mode.
+  async function saveCallSettings(modeOverride) {
+    const mode = typeof modeOverride === 'string' ? modeOverride : callMode;
     setSavingCall(true);
     setCallMsg('');
     try {
       const res = await fetch('/api/vapi/call-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forwardCell, callMode, ringSeconds }),
+        body: JSON.stringify({ forwardCell, callMode: mode, ringSeconds }),
       });
       const data = await res.json();
       setCallMsg(data.success ? '✓ Saved' : (data.error || 'Failed to save'));
@@ -385,6 +515,16 @@ export default function VoicePage() {
               When you miss a forwarded call, the AI answers the caller and you get a text + email about the lead.
             </p>
           </div>
+
+          {/* Keep your existing number — the capability already worked (verified
+              2026-07-28: caller ID passes through a carrier forward intact), it
+              was simply undiscoverable. Removes the biggest objection from any
+              established business with a number on their trucks and signs. */}
+          <KeepYourNumber
+            bizzybotNumber={status.phoneNumber}
+            callMode={callMode}
+            onUseAiFirst={() => { setCallMode('ai_first'); saveCallSettings('ai_first'); }}
+          />
 
           {/* Minutes usage */}
           <div className="bg-[#161B22] border border-gray-800 rounded-xl p-5">
