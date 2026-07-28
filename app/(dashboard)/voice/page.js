@@ -74,7 +74,16 @@ function CallRow({ call }) {
           {call.recording_url && (
             <div className="bg-[#0D1117] rounded-lg px-3 py-2">
               <p className="text-xs text-gray-500 font-medium mb-2">Recording</p>
-              <audio controls preload="none" src={call.recording_url} className="w-full h-8">
+              {/* Not call.recording_url directly — that points at a private R2
+                  bucket and returns 400 to the browser. This route checks the
+                  call belongs to you, then redirects to a freshly signed URL
+                  (Vapi's expire after 30 minutes). */}
+              <audio
+                controls
+                preload="none"
+                src={`/api/vapi/recording/${call.vapi_call_id}`}
+                className="w-full h-8"
+              >
                 Your browser can&apos;t play this recording.
               </audio>
             </div>
