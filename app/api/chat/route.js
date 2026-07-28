@@ -5,6 +5,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getAIConfigForUser } from '../ai-config/route.js';
 // Import centralized AI service for enhanced features
 import { generateChatResponse } from '../../../lib/ai-service.js';
+import { HOT_LEAD_KEYWORDS } from '../../../lib/hot-lead-keywords.js';
 
 // Force dynamic rendering for authentication
 export const dynamic = 'force-dynamic';
@@ -153,18 +154,12 @@ export async function POST(req) {
         hasCustomPrompt: !!aiConfig.systemPrompt
       });
 
-      // Your existing hot lead detection
+      // Hot-lead keywords come from the SHARED list, not a local copy. This
+      // branch had its own array of real-estate phrases ("cash buyer",
+      // "schedule showing", "ready to make an offer") that predated the
+      // multi-industry pivot and never received the 2026-07-19 de-fang.
       const messageContent = userMessage.content.toLowerCase();
-      const HOT_LEAD_KEYWORDS = [
-        'ready to buy', 'want to purchase', 'looking to buy', 'interested in buying',
-        'need to buy', 'planning to buy', 'ready to make an offer', 'want to make an offer',
-        'cash buyer', 'pre-approved', 'preapproved', 'have financing', 'financing approved',
-        'want to sell', 'need to sell', 'ready to sell', 'thinking of selling',
-        'urgent', 'asap', 'immediately', 'right away', 'this week', 'this month',
-        'schedule showing', 'book appointment', 'set up meeting', 'available today'
-      ];
-      
-      const isHotLead = HOT_LEAD_KEYWORDS.some(keyword => 
+      const isHotLead = HOT_LEAD_KEYWORDS.some(keyword =>
         messageContent.includes(keyword.toLowerCase())
       );
 
@@ -173,11 +168,13 @@ export async function POST(req) {
 
       // If no custom system prompt, use a default
       if (!systemPrompt || systemPrompt.trim() === 'You are a helpful AI assistant.') {
-        systemPrompt = `You are a professional AI assistant for a real estate business. 
-You help customers with all their real estate needs including buying, selling, and renting properties.
-
-Be helpful, professional, and knowledgeable about real estate.
-Always aim to capture leads and schedule appointments when appropriate.`;
+        // Industry-neutral: BizzyBot serves any client-facing business, and
+        // this used to make an unconfigured AI introduce itself as an estate
+        // agent regardless of what the customer actually does.
+        systemPrompt = `You are a professional AI assistant for this business.
+Answer customer questions helpfully and accurately using only what you know about the business.
+Never invent details you were not given.
+Aim to capture the customer's contact details and book an appointment when it is a natural next step.`;
       }
 
       // Add hot lead context if detected

@@ -168,7 +168,7 @@ export default function AIConfigPage() {
               <textarea
                 value={config.knowledgeBase}
                 onChange={(e) => setConfig({...config, knowledgeBase: e.target.value})}
-                placeholder="Example: We are a real estate agency specializing in luxury homes in downtown areas. Our services include buying, selling, and rental assistance. We offer free market analysis and have been in business for 15 years..."
+                placeholder="Example: We are a family-run HVAC company serving Martinsville and the surrounding counties. We install and repair heating and cooling systems, offer 24-hour emergency callouts, and have been in business for 15 years. Free estimates on new installs..."
                 className="w-full p-3 border border-gray-300 rounded-lg h-32 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
                 rows={6}
               />
