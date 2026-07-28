@@ -9,7 +9,7 @@ export default function Page() {
             Sign in to your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Access your AI real estate assistant
+            Welcome back to BizzyBot
           </p>
         </div>
         <SignIn />
